@@ -82,7 +82,7 @@ async def on_message(message):
                 try:
                     # เพิ่มข้อมูลลง Google Sheet
                     sheet.append_row([steam_name, shift_duration, start_date, end_date])
-                    await message.channel.send("ข้อมูลได้ถูกบันทึกลง Google Sheets เรียบร้อยแล้ว!")
+                
                 except Exception as e:
                     print(f"Error writing to Google Sheets: {e}")
                     await message.channel.send("เกิดข้อผิดพลาดในการบันทึกข้อมูลลง Google Sheets.")
