@@ -2,6 +2,7 @@ import discord
 import os
 import gspread
 import json
+import re
 from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask
 import threading
@@ -49,16 +50,40 @@ async def on_message(message):
         return
 
     print(f"ข้อความที่ได้รับ:\n{message.content}")
-    # คุณสามารถใส่ Logic สำหรับ Google Sheets ตรงนี้
-    if sheet:
-        try:
-            sheet.append_row([message.author.name, message.content])
-            await message.channel.send("บันทึกข้อความลง Google Sheets สำเร็จ!")
-        except Exception as e:
-            print(f"Error writing to Google Sheets: {e}")
-            await message.channel.send("เกิดข้อผิดพลาดในการบันทึกข้อมูลลง Google Sheets.")
-    else:
-        await message.channel.send("Google Sheets ยังไม่ได้ตั้งค่า.")
+    
+    if "Police Shift" in message.content:
+        # ใช้ Regex เพื่อดึงข้อมูล Steam Name, Shift duration, Start date, End date
+        match = re.search(
+            r"Steam Name:\s*(.+?)\s*\n"   # จับ Steam Name
+            r"Identifier:.*?\n"          # ข้าม Identifier
+            r"Shift duration:\s*(.+?)\s*\n"  # จับ Shift Duration
+            r"Start date:\s*(.+?)\s*\n"  # จับ Start Date
+            r"End date:\s*(.+)",         # จับ End Date (แก้ไขให้รองรับข้อมูลมากขึ้น)
+            message.content,
+            re.DOTALL  # รองรับข้อความหลายบรรทัด
+        )
+
+        if match:
+            steam_name = match.group(1).strip()
+            shift_duration = match.group(2).strip()
+            start_date = match.group(3).strip()
+            end_date = match.group(4).strip()
+
+            # Debug: แสดงข้อมูลที่จับได้
+            print(f"Debug: Steam Name={steam_name}, Shift Duration={shift_duration}, Start Date={start_date}, End Date={end_date}")
+
+            if sheet:
+                try:
+                    # เพิ่มข้อมูลลง Google Sheet
+                    sheet.append_row([steam_name, shift_duration, start_date, end_date])
+                    await message.channel.send("ข้อมูลได้ถูกบันทึกลง Google Sheets เรียบร้อยแล้ว!")
+                except Exception as e:
+                    print(f"Error writing to Google Sheets: {e}")
+                    await message.channel.send("เกิดข้อผิดพลาดในการบันทึกข้อมูลลง Google Sheets.")
+            else:
+                await message.channel.send("Google Sheets ยังไม่ได้ตั้งค่า.")
+        else:
+            await message.channel.send("ไม่สามารถจับข้อมูลที่ต้องการได้ โปรดตรวจสอบรูปแบบข้อความอีกครั้ง.")
 
 # ฟังก์ชันสำหรับรัน Discord Bot
 def run_discord_bot():
