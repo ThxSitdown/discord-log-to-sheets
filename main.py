@@ -32,7 +32,7 @@ if GOOGLE_CREDENTIALS:
         # ใช้ from_json_keyfile_dict แทนการโหลดจากไฟล์
         creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(GOOGLE_CREDENTIALS), SCOPE)
         client = gspread.authorize(creds)
-        sheet = client.open("testlog").sheet1
+        sheet = client.open("PoliceDuty").sheet1
 
         # ตรวจสอบว่ามีหัวข้อหรือยัง หากไม่มีให้เพิ่ม
         headers = sheet.row_values(1)
