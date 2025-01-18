@@ -3,16 +3,20 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import re  # สำหรับ Regex
 
-# ตั้งค่า Google Sheets API
-SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-CREDS = ServiceAccountCredentials.from_json_keyfile_name("testproject-448216-9e4f1207aa84.json", SCOPE)
-client = gspread.authorize(CREDS)
-sheet = client.open("testlog").sheet1  # เลือกชีตแรก
-
 # ตั้งค่า Discord Bot
 intents = discord.Intents.default()
 intents.message_content = True  # เปิดใช้งานให้ Bot อ่านข้อความ
 bot = discord.Client(intents=intents)
+
+# ตั้งค่า Google Sheets API
+SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")  # อ่าน JSON Credentials จากตัวแปร Environment
+if GOOGLE_CREDENTIALS:
+    creds = ServiceAccountCredentials.from_json_keyfile_name(GOOGLE_CREDENTIALS, SCOPE)
+    client = gspread.authorize(creds)
+    sheet = client.open("testlog").sheet1  # เลือกชีตแรก
+else:
+    sheet = None  # ใช้ None หากไม่มี Google Sheets
 
 @bot.event
 async def on_ready():
@@ -57,4 +61,4 @@ async def on_message(message):
         print("ข้อความไม่ได้อยู่ในรูปแบบที่ต้องการ")
 
 # รัน Bot
-bot.run("MTMzMDIzMDY2OTI1OTA1MTAzOQ.GZP9LD.EcLqdZCwoLUa3uF5m0MuSnsCtK56dihKbg4IQc")
+bot.run("DISCORD_BOT_TOKEN")
