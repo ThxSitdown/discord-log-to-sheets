@@ -3,6 +3,7 @@ import os
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import re  # สำหรับ Regex
+import json  # สำหรับเขียนไฟล์ credentials
 
 # ตั้งค่า Discord Bot
 intents = discord.Intents.default()
@@ -12,8 +13,14 @@ bot = discord.Client(intents=intents)
 # ตั้งค่า Google Sheets API
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")  # อ่าน JSON Credentials จากตัวแปร Environment
+
 if GOOGLE_CREDENTIALS:
-    creds = ServiceAccountCredentials.from_json_keyfile_name(GOOGLE_CREDENTIALS, SCOPE)
+    # เขียน JSON Credential ลงในไฟล์ชั่วคราว
+    with open("credentials.json", "w") as cred_file:
+        cred_file.write(GOOGLE_CREDENTIALS)
+
+    # ใช้ credentials.json เพื่อสร้างการเชื่อมต่อ
+    creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", SCOPE)
     client = gspread.authorize(creds)
     sheet = client.open("testlog").sheet1  # เลือกชีตแรก
 else:
