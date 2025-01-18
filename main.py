@@ -33,6 +33,12 @@ if GOOGLE_CREDENTIALS:
         creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(GOOGLE_CREDENTIALS), SCOPE)
         client = gspread.authorize(creds)
         sheet = client.open("testlog").sheet1
+
+        # ตรวจสอบว่ามีหัวข้อหรือยัง หากไม่มีให้เพิ่ม
+        headers = sheet.row_values(1)
+        if not headers or headers != ["Steam Name", "Shift duration", "Start date", "End date"]:
+            sheet.insert_row(["Steam Name", "Shift duration", "Start date", "End date"], index=1)
+
     except Exception as e:
         print(f"Error loading Google Sheets credentials: {e}")
         sheet = None
