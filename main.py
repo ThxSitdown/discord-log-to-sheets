@@ -7,16 +7,12 @@ from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask
 import threading
 
-# ตั้งค่า Flask App สำหรับ Fake Port
+# ตั้งค่า Flask App
 app = Flask(__name__)
 
 @app.route('/')
 def index():
     return "Bot is running."
-
-# ฟังก์ชันสำหรับรัน Flask บนพอร์ต 5000
-def run_flask():
-    app.run(host="0.0.0.0", port=5000)
 
 # ตั้งค่า Discord Bot
 intents = discord.Intents.default()
@@ -34,7 +30,6 @@ async def on_message(message):
         return
 
     if "Police Shift" in message.content:
-        # ใช้ Regex เพื่อดึงข้อมูล
         match = re.search(
             r"Steam Name:\s*(.+?)\s*\n"
             r"Shift duration:\s*(.+?)\s*\n"
@@ -79,13 +74,13 @@ else:
     print("GOOGLE_CREDENTIALS not found.")
     sheet = None
 
-# ฟังก์ชันสำหรับรัน Discord Bot
+# ฟังก์ชันสำหรับรัน Discord Bot ใน Thread
 def run_discord_bot():
     bot.run(os.getenv("DISCORD_BOT_TOKEN"))
 
-# รัน Flask และ Discord Bot พร้อมกัน
-if __name__ == "__main__":
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.start()
+# รัน Discord Bot ใน Thread แยก
+threading.Thread(target=run_discord_bot, daemon=True).start()
 
-    run_discord_bot()
+# Export Flask app สำหรับ Gunicorn
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
