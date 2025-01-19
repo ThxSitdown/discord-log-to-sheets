@@ -63,7 +63,8 @@ async def on_message(message):
             if sheet:
                 try:
                     # Append data to Google Sheets
-                    sheet.append_row([steam_name, shift_duration, start_date, end_date])
+                    next_row = len(sheet.col_values(1)) + 1
+                    sheet.insert_row([steam_name, shift_duration, start_date, end_date])
                     logging.info(f"Data successfully written to Google Sheets: {[steam_name, shift_duration, start_date, end_date]}")
                     await message.channel.send("ข้อมูลถูกบันทึกเรียบร้อยแล้ว!")
                 except Exception as e:
