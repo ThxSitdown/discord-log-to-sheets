@@ -30,13 +30,15 @@ async def on_message(message):
         return
 
     if "Police Shift" in message.content:
+        # แก้ไข Regex เพื่อไม่ต้องจับ Identifier
         match = re.search(
-            r"Steam Name:\s*(.+?)\s*\n"
-            r"Shift duration:\s*(.+?)\s*\n"
-            r"Start date:\s*(.+?)\s*\n"
-            r"End date:\s*(.+)",
+            r"Steam Name:\s*(.+?)\s*\n"          # จับ Steam Name
+            r"(?:Identifier:.*?\n)?"             # ข้าม Identifier หากมี
+            r"Shift duration:\s*(.+?)\s*\n"      # จับ Shift duration
+            r"Start date:\s*(.+?)\s*\n"          # จับ Start date
+            r"End date:\s*(.+)",                 # จับ End date
             message.content,
-            re.DOTALL
+            re.DOTALL  # รองรับข้อความหลายบรรทัด
         )
 
         if match:
