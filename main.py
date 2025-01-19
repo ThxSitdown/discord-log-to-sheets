@@ -63,8 +63,8 @@ async def on_message(message):
             if sheet:
                 try:
                     # Append data to Google Sheets
-                    new_row = [steam_name, shift_duration, start_date, end_date]
-                    sheet.append_row(new_row, value_input_option="RAW")
+                    last_row = len(sheet.col_values(1)) + 1  # คำนวณแถวถัดไป
+                    sheet.update(f"A{last_row}:D{last_row}", [[steam_name, shift_duration, start_date, end_date]])
 
                     logging.info(f"Data successfully written to Google Sheets: {new_row}")
                     await message.channel.send("ข้อมูลถูกบันทึกเรียบร้อยแล้ว!")
