@@ -32,54 +32,16 @@ async def on_ready():
 async def on_message(message):
     if message.author.bot:
         return
-    if message.content == "!ping":
-        await message.channel.send("pong!")
 
-
-# ตั้งค่า Google Sheets API
-SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
-
-if GOOGLE_CREDENTIALS:
-    try:
-        # ใช้ from_json_keyfile_dict แทนการโหลดจากไฟล์
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(GOOGLE_CREDENTIALS), SCOPE)
-        client = gspread.authorize(creds)
-        sheet = client.open("PoliceDuty").sheet1
-
-        # ตรวจสอบว่ามีหัวข้อหรือยัง หากไม่มีให้เพิ่ม
-        headers = sheet.row_values(1)
-        if not headers or headers != ["Steam Name", "Shift duration", "Start date", "End date"]:
-            sheet.insert_row(["Steam Name", "Shift duration", "Start date", "End date"], index=1)
-
-    except Exception as e:
-        print(f"Error loading Google Sheets credentials: {e}")
-        sheet = None
-else:
-    print("GOOGLE_CREDENTIALS not found in environment variables.")
-    sheet = None
-
-@bot.event
-async def on_ready():
-    print(f"Logged in as {bot.user}")
-
-@bot.event
-async def on_message(message):
-    if message.author.bot:
-        return
-
-    print(f"ข้อความที่ได้รับ:\n{message.content}")
-    
     if "Police Shift" in message.content:
-        # ใช้ Regex เพื่อดึงข้อมูล Steam Name, Shift duration, Start date, End date
+        # ใช้ Regex เพื่อดึงข้อมูล
         match = re.search(
-            r"Steam Name:\s*(.+?)\s*\n"   # จับ Steam Name
-            r"Identifier:.*?\n"          # ข้าม Identifier
-            r"Shift duration:\s*(.+?)\s*\n"  # จับ Shift Duration
-            r"Start date:\s*(.+?)\s*\n"  # จับ Start Date
-            r"End date:\s*(.+)",         # จับ End Date (แก้ไขให้รองรับข้อมูลมากขึ้น)
+            r"Steam Name:\s*(.+?)\s*\n"
+            r"Shift duration:\s*(.+?)\s*\n"
+            r"Start date:\s*(.+?)\s*\n"
+            r"End date:\s*(.+)",
             message.content,
-            re.DOTALL  # รองรับข้อความหลายบรรทัด
+            re.DOTALL
         )
 
         if match:
@@ -88,21 +50,34 @@ async def on_message(message):
             start_date = match.group(3).strip()
             end_date = match.group(4).strip()
 
-            # Debug: แสดงข้อมูลที่จับได้
-            print(f"Debug: Steam Name={steam_name}, Shift Duration={shift_duration}, Start Date={start_date}, End Date={end_date}")
+            print(f"Debug: {steam_name}, {shift_duration}, {start_date}, {end_date}")
 
             if sheet:
                 try:
-                    # เพิ่มข้อมูลลง Google Sheet
                     sheet.append_row([steam_name, shift_duration, start_date, end_date])
-                
                 except Exception as e:
                     print(f"Error writing to Google Sheets: {e}")
-                    await message.channel.send("เกิดข้อผิดพลาดในการบันทึกข้อมูลลง Google Sheets.")
+                    await message.channel.send("Error writing to Google Sheets.")
             else:
-                await message.channel.send("Google Sheets ยังไม่ได้ตั้งค่า.")
+                await message.channel.send("Google Sheets not configured.")
         else:
-            await message.channel.send("ไม่สามารถจับข้อมูลที่ต้องการได้ โปรดตรวจสอบรูปแบบข้อความอีกครั้ง.")
+            await message.channel.send("Invalid format.")
+
+# ตั้งค่า Google Sheets API
+SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
+
+if GOOGLE_CREDENTIALS:
+    try:
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(GOOGLE_CREDENTIALS), SCOPE)
+        client = gspread.authorize(creds)
+        sheet = client.open("PoliceDuty").sheet1
+    except Exception as e:
+        print(f"Error loading Google Sheets credentials: {e}")
+        sheet = None
+else:
+    print("GOOGLE_CREDENTIALS not found.")
+    sheet = None
 
 # ฟังก์ชันสำหรับรัน Discord Bot
 def run_discord_bot():
