@@ -41,6 +41,7 @@ async def on_message(message):
         return
 
     if "Police Shift" in message.content:
+        # Regular expression to extract data
         match = re.search(
             r"Steam Name:\s*(.+?)\s*\n"
             r"(?:Identifier:.*?\n)?"
@@ -61,7 +62,9 @@ async def on_message(message):
 
             if sheet:
                 try:
+                    # Append data to Google Sheets
                     sheet.append_row([steam_name, shift_duration, start_date, end_date])
+                    logging.info(f"Data successfully written to Google Sheets: {[steam_name, shift_duration, start_date, end_date]}")
                     await message.channel.send("ข้อมูลถูกบันทึกเรียบร้อยแล้ว!")
                 except Exception as e:
                     logging.error(f"Error writing to Google Sheets: {e}")
@@ -71,12 +74,14 @@ async def on_message(message):
         else:
             await message.channel.send("รูปแบบข้อความไม่ถูกต้อง โปรดตรวจสอบอีกครั้ง.")
 
+# ตั้งค่า Google Sheets
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
 sheet = None
 
 if GOOGLE_CREDENTIALS:
     try:
+        # ตั้งค่า Google Sheets
         creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(GOOGLE_CREDENTIALS), SCOPE)
         client = gspread.authorize(creds)
         sheet = client.open("PoliceDuty").sheet1
@@ -86,6 +91,7 @@ if GOOGLE_CREDENTIALS:
 else:
     logging.warning("GOOGLE_CREDENTIALS not found.")
 
+# ฟังก์ชันสำหรับรัน Discord Bot
 def run_discord_bot():
     try:
         logging.info("Starting Discord Bot...")
@@ -94,6 +100,7 @@ def run_discord_bot():
         logging.error(f"Discord bot encountered an error: {e}")
         raise
 
+# Main
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
     run_discord_bot()
