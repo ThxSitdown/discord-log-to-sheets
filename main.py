@@ -52,13 +52,14 @@ async def on_message(message):
             if sheet:
                 try:
                     sheet.append_row([steam_name, shift_duration, start_date, end_date])
+                    await message.channel.send("ข้อมูลถูกบันทึกเรียบร้อยแล้ว!")
                 except Exception as e:
                     print(f"Error writing to Google Sheets: {e}")
-                    await message.channel.send("Error writing to Google Sheets.")
+                    await message.channel.send("เกิดข้อผิดพลาดในการบันทึกข้อมูลไปยัง Google Sheets.")
             else:
-                await message.channel.send("Google Sheets not configured.")
+                await message.channel.send("Google Sheets ยังไม่ได้รับการตั้งค่า.")
         else:
-            await message.channel.send("Invalid format.")
+            await message.channel.send("รูปแบบข้อความไม่ถูกต้อง โปรดตรวจสอบอีกครั้ง.")
 
 # ตั้งค่า Google Sheets API
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -85,4 +86,4 @@ threading.Thread(target=run_discord_bot, daemon=True).start()
 
 # Export Flask app สำหรับ Gunicorn
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000, threaded=True)
