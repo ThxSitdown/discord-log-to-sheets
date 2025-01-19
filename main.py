@@ -19,6 +19,13 @@ app = Flask(__name__)
 def index():
     return "Bot is running."
 
+# ฟังก์ชันสำหรับรัน Flask App
+def run_flask():
+    try:
+        app.run(host="0.0.0.0", port=5000)
+    except Exception as e:
+        logging.error(f"Flask app encountered an error: {e}")
+
 # ตั้งค่า Discord Bot
 intents = discord.Intents.default()
 intents.message_content = True
@@ -36,15 +43,15 @@ async def on_message(message):
         return
 
     if "Police Shift" in message.content:
-        # แก้ไข Regex เพื่อจับข้อมูล
+        # ใช้ Regex เพื่อดึงข้อมูล
         match = re.search(
-            r"Steam Name:\s*(.+?)\s*\n"          # จับ Steam Name
-            r"(?:Identifier:.*?\n)?"               # ข้าม Identifier หากมี
-            r"Shift duration:\s*(.+?)\s*\n"      # จับ Shift duration
-            r"Start date:\s*(.+?)\s*\n"          # จับ Start date
-            r"End date:\s*(.+)",                   # จับ End date
+            r"Steam Name:\s*(.+?)\s*\n"
+            r"(?:Identifier:.*?\n)?"  # ข้าม Identifier หากมี
+            r"Shift duration:\s*(.+?)\s*\n"
+            r"Start date:\s*(.+?)\s*\n"
+            r"End date:\s*(.+)",
             message.content,
-            re.DOTALL  # รองรับข้อความหลายบรรทัด
+            re.DOTALL
         )
 
         if match:
@@ -93,14 +100,7 @@ def run_discord_bot():
             logging.error(f"Discord bot encountered an error: {e}")
             time.sleep(5)  # รอ 5 วินาทีก่อนเริ่มใหม่
 
-# ฟังก์ชันสำหรับรัน Flask App
-def run_flask_app():
-    try:
-        app.run(host="0.0.0.0", port=5000, threaded=True)
-    except Exception as e:
-        logging.error(f"Flask app encountered an error: {e}")
-
-# รัน Discord Bot และ Flask App ใน Thread แยก
+# รัน Flask และ Discord Bot พร้อมกัน
 if __name__ == "__main__":
-    threading.Thread(target=run_discord_bot, daemon=True).start()
-    run_flask_app()
+    threading.Thread(target=run_flask, daemon=True).start()
+    run_discord_bot()
