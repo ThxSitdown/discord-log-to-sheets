@@ -23,6 +23,19 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = discord.Client(intents=intents)
 
+@bot.event
+async def on_ready():
+    print(f"{bot.user} พร้อมใช้งาน!")
+    await bot.change_presence(activity=discord.Game(name="พร้อมใช้งาน!"))
+
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+    if message.content == "!ping":
+        await message.channel.send("pong!")
+
+
 # ตั้งค่า Google Sheets API
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
