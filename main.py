@@ -3,7 +3,6 @@ import os
 import gspread
 import json
 import re
-import time
 import logging
 from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask
@@ -19,9 +18,9 @@ app = Flask(__name__)
 def index():
     return "Bot is running."
 
-# ฟังก์ชันสำหรับรัน Flask App
 def run_flask():
     try:
+        logging.info("Starting Flask on port 5000...")
         app.run(host="0.0.0.0", port=5000)
     except Exception as e:
         logging.error(f"Flask app encountered an error: {e}")
@@ -34,7 +33,6 @@ bot = discord.Client(intents=intents)
 @bot.event
 async def on_ready():
     logging.info(f"{bot.user} is online and ready!")
-    logging.info(f"Connected to the following guilds: {[guild.name for guild in bot.guilds]}")
     await bot.change_presence(activity=discord.Game(name="พร้อมใช้งาน!"))
 
 @bot.event
@@ -43,10 +41,9 @@ async def on_message(message):
         return
 
     if "Police Shift" in message.content:
-        # ใช้ Regex เพื่อดึงข้อมูล
         match = re.search(
             r"Steam Name:\s*(.+?)\s*\n"
-            r"(?:Identifier:.*?\n)?"  # ข้าม Identifier หากมี
+            r"(?:Identifier:.*?\n)?"
             r"Shift duration:\s*(.+?)\s*\n"
             r"Start date:\s*(.+?)\s*\n"
             r"End date:\s*(.+)",
@@ -74,7 +71,6 @@ async def on_message(message):
         else:
             await message.channel.send("รูปแบบข้อความไม่ถูกต้อง โปรดตรวจสอบอีกครั้ง.")
 
-# ตั้งค่า Google Sheets API
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
 sheet = None
@@ -90,17 +86,14 @@ if GOOGLE_CREDENTIALS:
 else:
     logging.warning("GOOGLE_CREDENTIALS not found.")
 
-# ฟังก์ชันสำหรับรัน Discord Bot
 def run_discord_bot():
-    while True:
-        try:
-            logging.info("Starting Discord Bot...")
-            bot.run(os.getenv("DISCORD_BOT_TOKEN"))
-        except Exception as e:
-            logging.error(f"Discord bot encountered an error: {e}")
-            time.sleep(5)  # รอ 5 วินาทีก่อนเริ่มใหม่
+    try:
+        logging.info("Starting Discord Bot...")
+        bot.run(os.getenv("DISCORD_BOT_TOKEN"))
+    except Exception as e:
+        logging.error(f"Discord bot encountered an error: {e}")
+        raise
 
-# รัน Flask และ Discord Bot พร้อมกัน
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
     run_discord_bot()
