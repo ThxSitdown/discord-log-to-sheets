@@ -3,6 +3,7 @@ import os
 import gspread
 import json
 import re
+import time
 from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask
 import threading
@@ -77,13 +78,23 @@ else:
     print("GOOGLE_CREDENTIALS not found.")
     sheet = None
 
-# ฟังก์ชันสำหรับรัน Discord Bot ใน Thread
+# ฟังก์ชันสำหรับรัน Discord Bot
 def run_discord_bot():
-    bot.run(os.getenv("DISCORD_BOT_TOKEN"))
+    while True:
+        try:
+            bot.run(os.getenv("DISCORD_BOT_TOKEN"))
+        except Exception as e:
+            print(f"Discord bot encountered an error: {e}")
+            time.sleep(5)  # รอ 5 วินาทีก่อนเริ่มใหม่
 
-# รัน Discord Bot ใน Thread แยก
-threading.Thread(target=run_discord_bot, daemon=True).start()
+# ฟังก์ชันสำหรับรัน Flask App
+def run_flask_app():
+    try:
+        app.run(host="0.0.0.0", port=5000, threaded=True)
+    except Exception as e:
+        print(f"Flask app encountered an error: {e}")
 
-# Export Flask app สำหรับ Gunicorn
+# รัน Discord Bot และ Flask App ใน Thread แยก
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, threaded=True)
+    threading.Thread(target=run_discord_bot, daemon=True).start()
+    run_flask_app()
