@@ -22,7 +22,8 @@ bot = discord.Client(intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f"{bot.user} พร้อมใช้งาน!")
+    print(f"{bot.user} is online and ready!")
+    print(f"Connected to the following guilds: {[guild.name for guild in bot.guilds]}")
     await bot.change_presence(activity=discord.Game(name="พร้อมใช้งาน!"))
 
 @bot.event
@@ -82,6 +83,7 @@ else:
 def run_discord_bot():
     while True:
         try:
+            print("Starting Discord Bot...")
             bot.run(os.getenv("DISCORD_BOT_TOKEN"))
         except Exception as e:
             print(f"Discord bot encountered an error: {e}")
