@@ -40,41 +40,46 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    if "Police Shift" in message.content:
-        # Regular expression to extract data
-        match = re.search(
-            r"Steam Name:\s*(.+?)\s*\n"
-            r"(?:Identifier:.*?\n)?"
-            r"Shift duration:\s*(.+?)\s*\n"
-            r"Start date:\s*(.+?)\s*\n"
-            r"End date:\s*(.+)",
-            message.content,
-            re.DOTALL
-        )
+    try:
+        if "Police Shift" in message.content:
+            # Regular expression to extract data
+            match = re.search(
+                r"Steam Name:\s*(.+?)\s*\n"
+                r"(?:Identifier:.*?\n)?"
+                r"Shift duration:\s*(.+?)\s*\n"
+                r"Start date:\s*(.+?)\s*\n"
+                r"End date:\s*(.+)",
+                message.content,
+                re.DOTALL
+            )
 
-        if match:
-            steam_name = match.group(1).strip()
-            shift_duration = match.group(2).strip()
-            start_date = match.group(3).strip()
-            end_date = match.group(4).strip()
+            if match:
+                steam_name = match.group(1).strip()
+                shift_duration = match.group(2).strip()
+                start_date = match.group(3).strip()
+                end_date = match.group(4).strip()
 
-            logging.info(f"Received data: {steam_name}, {shift_duration}, {start_date}, {end_date}")
+                logging.info(f"Received data: {steam_name}, {shift_duration}, {start_date}, {end_date}")
 
-            if sheet:
-                try:
-                    # Append data to Google Sheets
-                    last_row = len(sheet.col_values(1)) + 1  # คำนวณแถวถัดไป
-                    sheet.update(f"A{last_row}:D{last_row}", [[steam_name, shift_duration, start_date, end_date]])
-                    logging.info(f"Data successfully written to Google Sheets at row {last_row}: {steam_name}, {shift_duration}, {start_date}, {end_date}")
-                    await message.channel.send("ข้อมูลถูกบันทึกเรียบร้อยแล้ว!")
+                if sheet:
+                    try:
+                        # Append data to Google Sheets
+                        last_row = len(sheet.col_values(1)) + 1
+                        sheet.update(f"A{last_row}:D{last_row}", [[steam_name, shift_duration, start_date, end_date]])
+                        logging.info(f"Data successfully written to Google Sheets at row {last_row}: {steam_name}, {shift_duration}, {start_date}, {end_date}")
+                        await message.channel.send("ข้อมูลถูกบันทึกเรียบร้อยแล้ว!")
 
-                except Exception as e:
-                    logging.error(f"Error writing to Google Sheets: {e}")
-                    await message.channel.send("เกิดข้อผิดพลาดในการบันทึกข้อมูลไปยัง Google Sheets.")
+                    except Exception as e:
+                        logging.error(f"Error writing to Google Sheets: {e}")
+                        await message.channel.send("เกิดข้อผิดพลาดในการบันทึกข้อมูลไปยัง Google Sheets.")
+                else:
+                    await message.channel.send("Google Sheets ยังไม่ได้รับการตั้งค่า.")
             else:
-                await message.channel.send("Google Sheets ยังไม่ได้รับการตั้งค่า.")
-        else:
-            await message.channel.send("รูปแบบข้อความไม่ถูกต้อง โปรดตรวจสอบอีกครั้ง.")
+                await message.channel.send("รูปแบบข้อความไม่ถูกต้อง โปรดตรวจสอบอีกครั้ง.")
+    except Exception as e:
+        logging.error(f"Error processing message: {e}")
+        await message.channel.send("เกิดข้อผิดพลาดบางอย่าง โปรดลองอีกครั้ง.")
+
 
 # ตั้งค่า Google Sheets
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -101,6 +106,20 @@ def run_discord_bot():
     except Exception as e:
         logging.error(f"Discord bot encountered an error: {e}")
         raise
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("bot.log"),
+        logging.StreamHandler()
+    ]
+)
+
+@app.route('/health')
+def health_check():
+    return {"status": "ok", "bot_status": bot.is_ready()}
+
 
 # Main
 if __name__ == "__main__":
