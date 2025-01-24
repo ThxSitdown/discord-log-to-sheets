@@ -141,7 +141,7 @@ def keep_alive():
                 logging.warning(f"Keep-alive failed with status code: {response.status_code}")
         except Exception as e:
             logging.error(f"Keep-alive error: {e}")
-        time.sleep(300)  # Ping every 5 minutes
+        time.sleep(40)
 
 # เรียกใช้ฟังก์ชัน keep_alive ใน thread อื่น
 threading.Thread(target=keep_alive, daemon=True).start()
