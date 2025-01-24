@@ -125,3 +125,23 @@ def health_check():
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
     run_discord_bot()
+
+import requests
+import time
+
+KEEP_ALIVE_URL = "https://https://discord-log-to-sheets.onrender.com/health"
+
+def keep_alive():
+    while True:
+        try:
+            response = requests.get(KEEP_ALIVE_URL)
+            if response.status_code == 200:
+                logging.info("Keep-alive successful.")
+            else:
+                logging.warning(f"Keep-alive failed with status code: {response.status_code}")
+        except Exception as e:
+            logging.error(f"Keep-alive error: {e}")
+        time.sleep(300)  # Ping every 5 minutes
+
+# เรียกใช้ฟังก์ชัน keep_alive ใน thread อื่น
+threading.Thread(target=keep_alive, daemon=True).start()
