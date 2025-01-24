@@ -4,9 +4,11 @@ import gspread
 import json
 import re
 import logging
+import threading
+import requests
+import time
 from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask
-import threading
 
 # ตั้งค่า Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -17,6 +19,10 @@ app = Flask(__name__)
 @app.route('/')
 def index():
     return "Bot is running."
+
+@app.route('/health')
+def health_check():
+    return {"status": "ok", "bot_status": bot.is_ready()}
 
 def run_flask():
     try:
@@ -80,7 +86,6 @@ async def on_message(message):
         logging.error(f"Error processing message: {e}")
         await message.channel.send("เกิดข้อผิดพลาดบางอย่าง โปรดลองอีกครั้ง.")
 
-
 # ตั้งค่า Google Sheets
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
@@ -107,29 +112,8 @@ def run_discord_bot():
         logging.error(f"Discord bot encountered an error: {e}")
         raise
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("bot.log"),
-        logging.StreamHandler()
-    ]
-)
-
-@app.route('/health')
-def health_check():
-    return {"status": "ok", "bot_status": bot.is_ready()}
-
-
-# Main
-if __name__ == "__main__":
-    threading.Thread(target=run_flask, daemon=True).start()
-    run_discord_bot()
-
-import requests
-import time
-
-KEEP_ALIVE_URL = "https://https://discord-log-to-sheets.onrender.com/health"
+# ฟังก์ชัน Keep-Alive
+KEEP_ALIVE_URL = "https://discord-log-to-sheets.onrender.com/health"
 
 def keep_alive():
     while True:
@@ -143,5 +127,8 @@ def keep_alive():
             logging.error(f"Keep-alive error: {e}")
         time.sleep(40)
 
-# เรียกใช้ฟังก์ชัน keep_alive ใน thread อื่น
-threading.Thread(target=keep_alive, daemon=True).start()
+# Main
+if __name__ == "__main__":
+    threading.Thread(target=run_flask, daemon=True).start()
+    threading.Thread(target=keep_alive, daemon=True).start()
+    run_discord_bot()
