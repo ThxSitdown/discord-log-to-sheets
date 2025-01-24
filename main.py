@@ -39,7 +39,7 @@ bot = discord.Client(intents=intents)
 @bot.event
 async def on_ready():
     logging.info(f"{bot.user} is online and ready!")
-    await bot.change_presence(activity=discord.Game(name="พร้อมใช้งาน!"))
+    await bot.change_presence(activity=discord.Game(name="Roblox"))
 
 @bot.event
 async def on_message(message):
