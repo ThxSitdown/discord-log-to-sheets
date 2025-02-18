@@ -13,6 +13,11 @@ from flask import Flask
 # ตั้งค่า Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
+# ตั้งค่า Discord Bot
+intents = discord.Intents.default()
+intents.message_content = True
+bot = discord.Client(intents=intents)
+
 # ตั้งค่า Flask App
 app = Flask(__name__)
 
@@ -22,19 +27,14 @@ def index():
 
 @app.route('/health')
 def health_check():
-    return {"status": "ok", "bot_status": bot.is_ready()}
+    return {"status": "ok", "bot_status": getattr(bot, "is_ready", lambda: False)()}
 
 def run_flask():
     try:
         logging.info("Starting Flask on port 5000...")
-        app.run(host="0.0.0.0", port=5000)
+        app.run(host="0.0.0.0", port=5000, threaded=True)
     except Exception as e:
         logging.error(f"Flask app encountered an error: {e}")
-
-# ตั้งค่า Discord Bot
-intents = discord.Intents.default()
-intents.message_content = True
-bot = discord.Client(intents=intents)
 
 @bot.event
 async def on_ready():
