@@ -64,21 +64,33 @@ async def on_message(message):
     logging.info(f"📩 ข้อความใหม่จาก {message.author}: {message.content}")
 
     try:
-        # อัปเดตการดึงข้อมูลให้รองรับทุกข้อความ
-        pattern = r"ชื่อ\s*(.+?)\s*\nไอดี\s*(.+?)\s*\nเวลาทำงาน\s*(.+?)\s*\nเวลาออกงาน\s*(.+)"
+        # ปรับปรุง regex ให้ครอบคลุมข้อมูลที่เพิ่มเข้ามา
+        pattern = r"รายงานเข้าเวรของ\s*-\s*(.+?)\s*\n" \
+                  r"รายได้\s*\n(.+?)\s*\n" \
+                  r"ระยะเวลาที่เข้าเวร\s*\n(.+?)\s*\n" \
+                  r"ชื่อ\s*\n(.+?)\s*\n" \
+                  r"ไอดี\s*\n(.+?)\s*\n" \
+                  r"เวลาเข้างาน\s*\n(.+?)\s*\n" \
+                  r"เวลาออกงาน\s*\n(.+?)\s*\n" \
+                  r"งาน\s*\n(.+?)$"
+
         match = re.search(pattern, message.content, re.DOTALL)
 
         if match:
-            steam_name = match.group(1).strip()
-            steam_id = match.group(2).strip()
-            start_time = match.group(3).strip()
-            end_time = match.group(4).strip()
+            officer_name = match.group(1).strip()
+            income = match.group(2).strip()
+            duty_duration = match.group(3).strip()
+            steam_name = match.group(4).strip()
+            steam_id = match.group(5).strip()
+            start_time = match.group(6).strip()
+            end_time = match.group(7).strip()
+            job = match.group(8).strip()
 
-            logging.info(f"✅ ดึงข้อมูลสำเร็จ: {steam_name}, {steam_id}, {start_time}, {end_time}")
+            logging.info(f"✅ ข้อมูลที่ดึงได้: {officer_name}, {income}, {duty_duration}, {steam_name}, {steam_id}, {start_time}, {end_time}, {job}")
 
             if sheet:
                 try:
-                    sheet.append_row([steam_name, steam_id, start_time, end_time])
+                    sheet.append_row([officer_name, income, duty_duration, steam_name, steam_id, start_time, end_time, job])
                     logging.info("✅ บันทึกข้อมูลลง Google Sheets สำเร็จ!")
                     await message.channel.send("✅ ข้อมูลถูกบันทึกเรียบร้อยแล้ว!")
                 except Exception as e:
