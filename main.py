@@ -16,6 +16,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 # ตั้งค่า Discord Bot
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True  # เปิดใช้งาน Server Members Intent
+intents.presences = True  # เปิดใช้งาน Presence Intent
+
 bot = discord.Client(intents=intents)
 
 # ตั้งค่า Flask App
@@ -52,7 +55,6 @@ async def on_message(message):
         return  # ข้ามข้อความจากห้องอื่น
 
     try:
-        # ปรับ Regex ให้รองรับข้อความจากภาพที่ให้มา
         match = re.search(
             r"ชื่อ\s*\n(.+?)\s*\n"        # ดึงชื่อ
             r"ไอดี\s*\n(.+?)\s*\n"       # ดึง Steam ID
@@ -72,12 +74,10 @@ async def on_message(message):
 
             if sheet:
                 try:
-                    # Append data to Google Sheets
                     last_row = len(sheet.col_values(1)) + 1
                     sheet.update(f"A{last_row}:D{last_row}", [[steam_name, steam_id, start_time, end_time]])
                     logging.info(f"Data written to Google Sheets at row {last_row}: {steam_name}, {steam_id}, {start_time}, {end_time}")
                     await message.channel.send("✅ ข้อมูลถูกบันทึกเรียบร้อยแล้ว!")
-
                 except Exception as e:
                     logging.error(f"Error writing to Google Sheets: {e}")
                     await message.channel.send("❌ เกิดข้อผิดพลาดในการบันทึกข้อมูลไปยัง Google Sheets.")
@@ -85,7 +85,6 @@ async def on_message(message):
                 await message.channel.send("⚠️ Google Sheets ยังไม่ได้รับการตั้งค่า.")
         else:
             await message.channel.send("⚠️ รูปแบบข้อความไม่ถูกต้อง โปรดตรวจสอบอีกครั้ง.")
-
     except Exception as e:
         logging.error(f"Error processing message: {e}")
         await message.channel.send("❌ เกิดข้อผิดพลาดบางอย่าง โปรดลองอีกครั้ง.")
