@@ -46,8 +46,8 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    ALLOWED_CHANNEL_NAME = "logduty"  # ใช้ชื่อห้อง
-    ALLOWED_CHANNEL_ID = 1330215305066188864  # หรือใช้ ID ของห้อง
+    ALLOWED_CHANNEL_NAME = "#📁◜police-duty"  # ใช้ชื่อห้อง
+    ALLOWED_CHANNEL_ID = 1341317415367082006  # หรือใช้ ID ของห้อง
     
     if message.channel.name != ALLOWED_CHANNEL_NAME and message.channel.id != ALLOWED_CHANNEL_ID:
         return  # ข้ามข้อความจากห้องอื่น
