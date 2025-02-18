@@ -34,35 +34,39 @@ def health_check():
 
 def run_flask():
     try:
-        logging.info("Starting Flask on port 5000...")
+        logging.info("🌍 Starting Flask on port 5000...")
         app.run(host="0.0.0.0", port=5000, threaded=True)
     except Exception as e:
-        logging.error(f"Flask app encountered an error: {e}")
+        logging.error(f"❌ Flask app error: {e}")
 
 @bot.event
 async def on_ready():
-    logging.info(f"{bot.user} is online and ready!")
+    logging.info(f"🤖 {bot.user} is online and ready!")
     await bot.change_presence(activity=discord.Game(name="Roblox"))
+
+    if sheet:
+        try:
+            test_value = sheet.acell("A1").value
+            logging.info("✅ Google Sheets เชื่อมต่อสำเร็จ! (Test Read: A1 = {test_value})")
+        except Exception as e:
+            logging.error(f"❌ ไม่สามารถเชื่อมต่อ Google Sheets: {e}")
 
 @bot.event
 async def on_message(message):
     if message.author.bot:
         return
 
-    ALLOWED_CHANNEL_ID = 1341317415367082006  # ใช้ ID ของห้องเพื่อความแม่นยำ
-    
+    ALLOWED_CHANNEL_ID = 1341317415367082006  # ใส่ ID ของห้องที่ต้องการให้บอทฟัง
+
     if message.channel.id != ALLOWED_CHANNEL_ID:
         return  # ข้ามข้อความจากห้องอื่น
 
+    logging.info(f"📩 ข้อความใหม่จาก {message.author}: {message.content}")
+
     try:
-        match = re.search(
-            r"ชื่อ\s*\n(.+?)\s*\n"        # ดึงชื่อ
-            r"ไอดี\s*\n(.+?)\s*\n"       # ดึง Steam ID
-            r"เวลาทำงาน\s*\n(.+?)\s*\n"  # ดึงเวลาเข้างาน
-            r"เวลาออกงาน\s*\n(.+)",      # ดึงเวลาออกงาน
-            message.content,
-            re.DOTALL
-        )
+        # อัปเดตการดึงข้อมูลให้รองรับทุกข้อความ
+        pattern = r"ชื่อ\s*(.+?)\s*\nไอดี\s*(.+?)\s*\nเวลาทำงาน\s*(.+?)\s*\nเวลาออกงาน\s*(.+)"
+        match = re.search(pattern, message.content, re.DOTALL)
 
         if match:
             steam_name = match.group(1).strip()
@@ -70,24 +74,27 @@ async def on_message(message):
             start_time = match.group(3).strip()
             end_time = match.group(4).strip()
 
-            logging.info(f"Received data: {steam_name}, {steam_id}, {start_time}, {end_time}")
+            logging.info(f"✅ ดึงข้อมูลสำเร็จ: {steam_name}, {steam_id}, {start_time}, {end_time}")
 
             if sheet:
                 try:
-                    last_row = len(sheet.col_values(1)) + 1
-                    sheet.update(f"A{last_row}:D{last_row}", [[steam_name, steam_id, start_time, end_time]])
-                    logging.info(f"Data written to Google Sheets at row {last_row}: {steam_name}, {steam_id}, {start_time}, {end_time}")
+                    sheet.append_row([steam_name, steam_id, start_time, end_time])
+                    logging.info("✅ บันทึกข้อมูลลง Google Sheets สำเร็จ!")
                     await message.channel.send("✅ ข้อมูลถูกบันทึกเรียบร้อยแล้ว!")
                 except Exception as e:
-                    logging.error(f"Error writing to Google Sheets: {e}")
-                    await message.channel.send("❌ เกิดข้อผิดพลาดในการบันทึกข้อมูลไปยัง Google Sheets.")
+                    logging.error(f"❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล Google Sheets: {e}")
+                    await message.channel.send("❌ บันทึกข้อมูลไม่สำเร็จ โปรดลองอีกครั้ง.")
             else:
                 await message.channel.send("⚠️ Google Sheets ยังไม่ได้รับการตั้งค่า.")
         else:
-            await message.channel.send("⚠️ รูปแบบข้อความไม่ถูกต้อง โปรดตรวจสอบอีกครั้ง.")
+            logging.warning("⚠️ รูปแบบข้อความไม่ถูกต้อง!")
+            await message.channel.send("⚠️ กรุณาส่งข้อมูลให้ถูกต้องตามแบบฟอร์ม.")
+    
     except Exception as e:
-        logging.error(f"Error processing message: {e}")
-        await message.channel.send("❌ เกิดข้อผิดพลาดบางอย่าง โปรดลองอีกครั้ง.")
+        logging.error(f"❌ Error processing message: {e}")
+        await message.channel.send("❌ เกิดข้อผิดพลาด โปรดลองอีกครั้ง.")
+
+    await bot.process_commands(message)  # รองรับคำสั่งของบอท
 
 # ตั้งค่า Google Sheets
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -113,8 +120,10 @@ def run_discord_bot():
         return
     
     try:
-        logging.info("Starting Discord Bot...")
+        logging.info("🚀 Starting Discord Bot...")
         bot.run(DISCORD_BOT_TOKEN)
+    except discord.errors.LoginFailure:
+        logging.error("❌ Invalid Discord Bot Token! กรุณาตรวจสอบโทเค็นของคุณ.")
     except Exception as e:
         logging.error(f"❌ Discord bot encountered an error: {e}")
 
@@ -128,7 +137,7 @@ def keep_alive():
             if response.status_code == 200:
                 logging.info("✅ Keep-alive successful.")
             else:
-                logging.warning(f"⚠️ Keep-alive failed with status code: {response.status_code}")
+                logging.warning(f"⚠️ Keep-alive failed (Status: {response.status_code})")
         except Exception as e:
             logging.error(f"❌ Keep-alive error: {e}")
         time.sleep(40)
