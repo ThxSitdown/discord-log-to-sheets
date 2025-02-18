@@ -46,48 +46,49 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    ALLOWED_CHANNEL_NAME = "#📁◜police-duty"  # ใช้ชื่อห้อง
-    ALLOWED_CHANNEL_ID = 1341317415367082006  # หรือใช้ ID ของห้อง
+    ALLOWED_CHANNEL_ID = 1341317415367082006  # ใช้ ID ของห้องเพื่อความแม่นยำ
     
-    if message.channel.name != ALLOWED_CHANNEL_NAME and message.channel.id != ALLOWED_CHANNEL_ID:
+    if message.channel.id != ALLOWED_CHANNEL_ID:
         return  # ข้ามข้อความจากห้องอื่น
 
     try:
-        # Regular expression ใหม่ที่รองรับฟอร์แมตข้อมูลในภาพ
+        # ปรับ Regex ให้รองรับข้อความจากภาพที่ให้มา
         match = re.search(
-            r"ชื่อ\s*\n(.+?)\s*\n"         # ดึงชื่อ
-            r"เวลาเข้างาน\s*\n(.+?)\s*\n"  # ดึงเวลาเข้างาน
-            r"เวลาออกงาน\s*\n(.+)",        # ดึงเวลาออกงาน
+            r"ชื่อ\s*\n(.+?)\s*\n"        # ดึงชื่อ
+            r"ไอดี\s*\n(.+?)\s*\n"       # ดึง Steam ID
+            r"เวลาทำงาน\s*\n(.+?)\s*\n"  # ดึงเวลาเข้างาน
+            r"เวลาออกงาน\s*\n(.+)",      # ดึงเวลาออกงาน
             message.content,
             re.DOTALL
         )
 
         if match:
             steam_name = match.group(1).strip()
-            start_time = match.group(2).strip()
-            end_time = match.group(3).strip()
+            steam_id = match.group(2).strip()
+            start_time = match.group(3).strip()
+            end_time = match.group(4).strip()
 
-            logging.info(f"Received data: {steam_name}, {start_time}, {end_time}")
+            logging.info(f"Received data: {steam_name}, {steam_id}, {start_time}, {end_time}")
 
             if sheet:
                 try:
                     # Append data to Google Sheets
                     last_row = len(sheet.col_values(1)) + 1
-                    sheet.update(f"A{last_row}:C{last_row}", [[steam_name, start_time, end_time]])
-                    logging.info(f"Data written to Google Sheets at row {last_row}: {steam_name}, {start_time}, {end_time}")
-                    await message.channel.send("ข้อมูลถูกบันทึกเรียบร้อยแล้ว!")
+                    sheet.update(f"A{last_row}:D{last_row}", [[steam_name, steam_id, start_time, end_time]])
+                    logging.info(f"Data written to Google Sheets at row {last_row}: {steam_name}, {steam_id}, {start_time}, {end_time}")
+                    await message.channel.send("✅ ข้อมูลถูกบันทึกเรียบร้อยแล้ว!")
 
                 except Exception as e:
                     logging.error(f"Error writing to Google Sheets: {e}")
-                    await message.channel.send("เกิดข้อผิดพลาดในการบันทึกข้อมูลไปยัง Google Sheets.")
+                    await message.channel.send("❌ เกิดข้อผิดพลาดในการบันทึกข้อมูลไปยัง Google Sheets.")
             else:
-                await message.channel.send("Google Sheets ยังไม่ได้รับการตั้งค่า.")
+                await message.channel.send("⚠️ Google Sheets ยังไม่ได้รับการตั้งค่า.")
         else:
-            await message.channel.send("รูปแบบข้อความไม่ถูกต้อง โปรดตรวจสอบอีกครั้ง.")
+            await message.channel.send("⚠️ รูปแบบข้อความไม่ถูกต้อง โปรดตรวจสอบอีกครั้ง.")
 
     except Exception as e:
         logging.error(f"Error processing message: {e}")
-        await message.channel.send("เกิดข้อผิดพลาดบางอย่าง โปรดลองอีกครั้ง.")
+        await message.channel.send("❌ เกิดข้อผิดพลาดบางอย่าง โปรดลองอีกครั้ง.")
 
 # ตั้งค่า Google Sheets
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -99,11 +100,11 @@ if GOOGLE_CREDENTIALS:
         creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(GOOGLE_CREDENTIALS), SCOPE)
         client = gspread.authorize(creds)
         sheet = client.open("PoliceDuty").worksheet("Sheet1")
-        logging.info("Google Sheets setup completed.")
+        logging.info("✅ Google Sheets setup completed.")
     except Exception as e:
-        logging.error(f"Error loading Google Sheets credentials: {e}")
+        logging.error(f"❌ Error loading Google Sheets credentials: {e}")
 else:
-    logging.warning("GOOGLE_CREDENTIALS not found.")
+    logging.warning("⚠️ GOOGLE_CREDENTIALS not found.")
 
 # ฟังก์ชันสำหรับรัน Discord Bot
 def run_discord_bot():
@@ -111,7 +112,7 @@ def run_discord_bot():
         logging.info("Starting Discord Bot...")
         bot.run(os.getenv("DISCORD_BOT_TOKEN"))
     except Exception as e:
-        logging.error(f"Discord bot encountered an error: {e}")
+        logging.error(f"❌ Discord bot encountered an error: {e}")
         raise
 
 # ฟังก์ชัน Keep-Alive
@@ -122,11 +123,11 @@ def keep_alive():
         try:
             response = requests.get(KEEP_ALIVE_URL)
             if response.status_code == 200:
-                logging.info("Keep-alive successful.")
+                logging.info("✅ Keep-alive successful.")
             else:
-                logging.warning(f"Keep-alive failed with status code: {response.status_code}")
+                logging.warning(f"⚠️ Keep-alive failed with status code: {response.status_code}")
         except Exception as e:
-            logging.error(f"Keep-alive error: {e}")
+            logging.error(f"❌ Keep-alive error: {e}")
         time.sleep(40)
 
 # Main
