@@ -16,8 +16,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 # ตั้งค่า Discord Bot
 intents = discord.Intents.default()
 intents.message_content = True
-intents.members = True  # เปิดใช้งาน Server Members Intent
-intents.presences = True  # เปิดใช้งาน Presence Intent
+intents.members = True
+intents.presences = True
 
 bot = discord.Client(intents=intents)
 
@@ -30,7 +30,7 @@ def index():
 
 @app.route('/health')
 def health_check():
-    return {"status": "ok", "bot_status": getattr(bot, "is_ready", lambda: False)()}
+    return {"status": "ok", "bot_status": bot.is_ready()}
 
 def run_flask():
     try:
@@ -107,12 +107,16 @@ else:
 
 # ฟังก์ชันสำหรับรัน Discord Bot
 def run_discord_bot():
+    DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+    if not DISCORD_BOT_TOKEN:
+        logging.error("❌ DISCORD_BOT_TOKEN not found. Bot will not start.")
+        return
+    
     try:
         logging.info("Starting Discord Bot...")
-        bot.run(os.getenv("DISCORD_BOT_TOKEN"))
+        bot.run(DISCORD_BOT_TOKEN)
     except Exception as e:
         logging.error(f"❌ Discord bot encountered an error: {e}")
-        raise
 
 # ฟังก์ชัน Keep-Alive
 KEEP_ALIVE_URL = "https://discord-log-to-sheets.onrender.com/health"
