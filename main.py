@@ -20,7 +20,7 @@ intents.message_content = True
 intents.members = True
 intents.presences = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)  # ✅ เปลี่ยนจาก Client เป็น Bot
+bot = commands.Bot(command_prefix="!", intents=intents)  # ✅ ใช้ Bot แทน Client
 
 # ตั้งค่า Flask App
 app = Flask(__name__)
@@ -61,35 +61,58 @@ async def on_message(message):
         return
 
     if message.author.bot and message.author.name == "Captain Hook":
-        # ✅ ตรวจสอบข้อความที่ได้รับ
         content = message.content.strip()
         embed_content = ""
 
+        # ✅ ดึงข้อมูลจาก Embed
         if message.embeds:
-            embed_content = "\n".join([
-                f"{embed.title}\n{embed.description}" if embed.title else embed.description
-                for embed in message.embeds if embed.description or embed.title
-            ])
+            for embed in message.embeds:
+                logging.info(f"📌 Embed Title: {embed.title}")
+                logging.info(f"📌 Embed Description: {embed.description}")
+
+                for field in embed.fields:
+                    logging.info(f"📌 Embed Field: {field.name} -> {field.value}")
+
+                embed_content = "\n".join([
+                    f"{embed.title}\n{embed.description}" if embed.title else embed.description
+                    for embed in message.embeds if embed.description or embed.title
+                ])
 
         # ✅ รวมข้อความจาก content และ embed
         full_content = content if content else embed_content
-
         logging.info(f"📥 ได้รับข้อความจาก Captain Hook:\n{repr(full_content)}")
 
         if not full_content:
             logging.warning("⚠️ ข้อความที่ได้รับว่างเปล่า!")
             return  
 
-        # ✅ ใช้ Regex วิเคราะห์ข้อมูล
-        pattern = r"ชื่อ\s*(.+?)\s*ไอดี\s*steam:(\S+)\s*เวลาเข้างาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)\s*เวลาออกงาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)"
-        match = re.search(pattern, full_content, re.DOTALL | re.MULTILINE | re.IGNORECASE)
+        # ✅ ตรวจสอบข้อมูลจาก Embed Fields
+        name, steam_id, check_in_time, check_out_time = None, None, None, None
 
-        if match:
-            name = match.group(1).strip()
-            steam_id = match.group(2).strip()
-            check_in_time = match.group(3).strip()
-            check_out_time = match.group(4).strip()
+        for embed in message.embeds:
+            for field in embed.fields:
+                if "ชื่อ" in field.name:
+                    name = field.value.strip()
+                elif "ไอดี" in field.name:
+                    steam_id = field.value.strip().replace("steam:", "")
+                elif "เข้างาน" in field.name:
+                    check_in_time = field.value.strip()
+                elif "ออกงาน" in field.name:
+                    check_out_time = field.value.strip()
 
+        # ✅ หากดึงข้อมูลจาก Embed ไม่ได้ ลองใช้ Regex
+        if not (name and steam_id and check_in_time and check_out_time):
+            pattern = r"ชื่อ\s*(.+?)\s*ไอดี\s*steam:(\S+)\s*เวลาเข้างาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)\s*เวลาออกงาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)"
+            match = re.search(pattern, full_content, re.DOTALL | re.MULTILINE | re.IGNORECASE)
+
+            if match:
+                name = match.group(1).strip()
+                steam_id = match.group(2).strip()
+                check_in_time = match.group(3).strip()
+                check_out_time = match.group(4).strip()
+
+        # ✅ ตรวจสอบว่าข้อมูลครบถ้วนก่อนบันทึก
+        if name and steam_id and check_in_time and check_out_time:
             logging.info(f"📌 บันทึกข้อมูล: {name}, {steam_id}, {check_in_time}, {check_out_time}")
 
             if sheet:
@@ -99,7 +122,7 @@ async def on_message(message):
                 except Exception as e:
                     logging.error(f"❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล Google Sheets: {e}")
         else:
-            logging.warning(f"⚠️ ข้อมูลที่ได้รับไม่ตรงกับรูปแบบที่กำหนด:\n{repr(full_content)}")  
+            logging.warning("⚠️ ข้อมูลไม่ครบถ้วน ไม่สามารถบันทึกได้!")
 
     await bot.process_commands(message)
 
