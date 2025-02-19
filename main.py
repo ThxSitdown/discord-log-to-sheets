@@ -90,7 +90,7 @@ async def on_message(message):
             for embed in message.embeds:
                 for field in embed.fields:
                     if "ชื่อ" in field.name:
-                        name = field.value.strip()
+                        name = field.value.strip("`").strip()
                     elif "ไอดี" in field.name:
                         steam_id = field.value.strip().replace("steam:", "")
                     elif "เข้างาน" in field.name:
@@ -104,7 +104,7 @@ async def on_message(message):
             match = re.search(pattern, content, re.DOTALL | re.MULTILINE | re.IGNORECASE)
 
             if match:
-                name = match.group(1).strip()
+                name = match.group(1).strip("`").strip()
                 steam_id = match.group(2).strip()
                 check_in_time = format_datetime(match.group(3).strip())
                 check_out_time = format_datetime(match.group(4).strip())
