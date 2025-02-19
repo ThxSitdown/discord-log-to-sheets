@@ -61,11 +61,12 @@ async def on_message(message):
         return
 
     if message.author.bot and message.author.name == "Captain Hook":  
-        logging.info(f"📥 ได้รับข้อความจาก Captain Hook: {message.content}")
+        logging.info(f"📥 ได้รับข้อความจาก Captain Hook: \n{message.content}")  # ✅ Log ข้อความออกมา
 
-        # ใช้ Regular Expression ดึงข้อมูล
-        pattern = r"ชื่อ\s*\n(.+?)\s*\nไอดี\s*\n(.+?)\s*\nเวลาเข้างาน\s*\n(.+?)\s*\nเวลาออกงาน\s*\n(.+?)"
-        match = re.search(pattern, message.content, re.DOTALL)
+        # ✅ ปรับปรุง Regex ให้รองรับรูปแบบที่ได้รับจริงๆ
+        pattern = r"ชื่อ\s*(.+?)\s*ไอดี\s*steam:(\S+)\s*เวลาเข้างาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)\s*เวลาออกงาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)"
+
+        match = re.search(pattern, message.content, re.DOTALL | re.MULTILINE | re.IGNORECASE)
 
         if match:
             name = match.group(1).strip()
@@ -82,9 +83,9 @@ async def on_message(message):
                 except Exception as e:
                     logging.error(f"❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล Google Sheets: {e}")
         else:
-            logging.warning("⚠️ ข้อมูลที่ได้รับไม่ตรงกับรูปแบบที่กำหนด")
+            logging.warning(f"⚠️ ข้อมูลที่ได้รับไม่ตรงกับรูปแบบที่กำหนด: \n{message.content}")  # ✅ Log ข้อความผิดพลาด
 
-    await bot.process_commands(message)  # ✅ ใช้ได้แล้ว
+    await bot.process_commands(message)
 
 # ตั้งค่า Google Sheets
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
