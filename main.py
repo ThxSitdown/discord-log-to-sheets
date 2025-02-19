@@ -52,29 +52,33 @@ async def on_ready():
         except Exception as e:
             logging.error(f"❌ ไม่สามารถเชื่อมต่อ Google Sheets: {e}")
 
+# ✅ รับข้อมูลเฉพาะจากห้องที่มี ID = 1341317415367082006 เท่านั้น
+TARGET_CHANNEL_ID = 1341317415367082006  # 🔥 กำหนดค่า ID ห้องที่ต้องการให้รับข้อมูล
+
 @bot.event
 async def on_message(message):
-    if message.author.bot and message.author.name == "Captain Hook":  
-        logging.info("📥 ได้รับข้อความจาก Captain Hook")
+    if message.channel.id == TARGET_CHANNEL_ID:  # ✅ ตรวจสอบห้องที่กำหนด
+        if message.author.bot and message.author.name == "Captain Hook":  
+            logging.info("📥 ได้รับข้อความจาก Captain Hook ในห้องที่กำหนด")
 
-        # ใช้ Regular Expression ดึงข้อมูล
-        pattern = r"ชื่อ\s*\n(.+?)\s*\nไอดี\s*\n(.+?)\s*\nเวลาเข้างาน\s*\n(.+?)\s*\nเวลาออกงาน\s*\n(.+?)\s*\n"
-        match = re.search(pattern, message.content, re.DOTALL)
+            # ใช้ Regular Expression ดึงข้อมูล
+            pattern = r"ชื่อ\s*\n(.+?)\s*\nไอดี\s*\n(.+?)\s*\nเวลาเข้างาน\s*\n(.+?)\s*\nเวลาออกงาน\s*\n(.+?)\s*\n"
+            match = re.search(pattern, message.content, re.DOTALL)
 
-        if match:
-            name = match.group(1).strip()
-            steam_id = match.group(2).strip()
-            check_in_time = match.group(3).strip()
-            check_out_time = match.group(4).strip()
+            if match:
+                name = match.group(1).strip()
+                steam_id = match.group(2).strip()
+                check_in_time = match.group(3).strip()
+                check_out_time = match.group(4).strip()
 
-            logging.info(f"📌 บันทึกข้อมูล: {name}, {steam_id}, {check_in_time}, {check_out_time}")
+                logging.info(f"📌 บันทึกข้อมูล: {name}, {steam_id}, {check_in_time}, {check_out_time}")
 
-            if sheet:
-                try:
-                    sheet.append_row([name, steam_id, check_in_time, check_out_time])
-                    logging.info("✅ ข้อมูลถูกบันทึกลง Google Sheets สำเร็จ")
-                except Exception as e:
-                    logging.error(f"❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล Google Sheets: {e}")
+                if sheet:
+                    try:
+                        sheet.append_row([name, steam_id, check_in_time, check_out_time])
+                        logging.info("✅ ข้อมูลถูกบันทึกลง Google Sheets สำเร็จ")
+                    except Exception as e:
+                        logging.error(f"❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล Google Sheets: {e}")
 
     await bot.process_commands(message)  # ✅ ใช้ได้แล้ว
 
