@@ -47,64 +47,33 @@ async def on_ready():
     if sheet:
         try:
             test_value = sheet.acell("A1").value
-            logging.info("✅ Google Sheets เชื่อมต่อสำเร็จ! (Test Read: A1 = {test_value})")
+            logging.info(f"✅ Google Sheets เชื่อมต่อสำเร็จ! (Test Read: A1 = {test_value})")
         except Exception as e:
             logging.error(f"❌ ไม่สามารถเชื่อมต่อ Google Sheets: {e}")
 
 @bot.event
 async def on_message(message):
-    if message.author.bot:
-        return
+    if message.author.bot and message.author.name == "Captain Hook":  
+        logging.info("📥 ได้รับข้อความจาก Captain Hook")
 
-    ALLOWED_CHANNEL_ID = 1341317415367082006  # ใส่ ID ของห้องที่ต้องการให้บอทฟัง
-
-    if message.channel.id != ALLOWED_CHANNEL_ID:
-        return  # ข้ามข้อความจากห้องอื่น
-
-    logging.info(f"📩 ข้อความใหม่จาก {message.author}: {message.content}")
-
-    try:
-        # ปรับปรุง regex ให้ครอบคลุมข้อมูลที่เพิ่มเข้ามา
-        pattern = r"รายงานเข้าเวรของ\s*-\s*(.+?)\s*\n" \
-                  r"รายได้\s*\n(.+?)\s*\n" \
-                  r"ระยะเวลาที่เข้าเวร\s*\n(.+?)\s*\n" \
-                  r"ชื่อ\s*\n(.+?)\s*\n" \
-                  r"ไอดี\s*\n(.+?)\s*\n" \
-                  r"เวลาเข้างาน\s*\n(.+?)\s*\n" \
-                  r"เวลาออกงาน\s*\n(.+?)\s*\n" \
-                  r"งาน\s*\n(.+?)$"
-
+        # ใช้ Regular Expression ดึงข้อมูล
+        pattern = r"ชื่อ\s*\n(.+?)\s*\nไอดี\s*\n(.+?)\s*\nเวลาเข้างาน\s*\n(.+?)\s*\nเวลาออกงาน\s*\n(.+?)\s*\n"
         match = re.search(pattern, message.content, re.DOTALL)
 
         if match:
-            officer_name = match.group(1).strip()
-            income = match.group(2).strip()
-            duty_duration = match.group(3).strip()
-            steam_name = match.group(4).strip()
-            steam_id = match.group(5).strip()
-            start_time = match.group(6).strip()
-            end_time = match.group(7).strip()
-            job = match.group(8).strip()
+            name = match.group(1).strip()
+            steam_id = match.group(2).strip()
+            check_in_time = match.group(3).strip()
+            check_out_time = match.group(4).strip()
 
-            logging.info(f"✅ ข้อมูลที่ดึงได้: {officer_name}, {income}, {duty_duration}, {steam_name}, {steam_id}, {start_time}, {end_time}, {job}")
+            logging.info(f"📌 บันทึกข้อมูล: {name}, {steam_id}, {check_in_time}, {check_out_time}")
 
             if sheet:
                 try:
-                    sheet.append_row([officer_name, income, duty_duration, steam_name, steam_id, start_time, end_time, job])
-                    logging.info("✅ บันทึกข้อมูลลง Google Sheets สำเร็จ!")
-                    await message.channel.send("✅ ข้อมูลถูกบันทึกเรียบร้อยแล้ว!")
+                    sheet.append_row([name, steam_id, check_in_time, check_out_time])
+                    logging.info("✅ ข้อมูลถูกบันทึกลง Google Sheets สำเร็จ")
                 except Exception as e:
                     logging.error(f"❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล Google Sheets: {e}")
-                    await message.channel.send("❌ บันทึกข้อมูลไม่สำเร็จ โปรดลองอีกครั้ง.")
-            else:
-                await message.channel.send("⚠️ Google Sheets ยังไม่ได้รับการตั้งค่า.")
-        else:
-            logging.warning("⚠️ รูปแบบข้อความไม่ถูกต้อง!")
-            await message.channel.send("⚠️ กรุณาส่งข้อมูลให้ถูกต้องตามแบบฟอร์ม.")
-    
-    except Exception as e:
-        logging.error(f"❌ Error processing message: {e}")
-        await message.channel.send("❌ เกิดข้อผิดพลาด โปรดลองอีกครั้ง.")
 
     await bot.process_commands(message)  # รองรับคำสั่งของบอท
 
