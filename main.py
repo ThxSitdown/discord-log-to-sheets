@@ -57,12 +57,18 @@ TARGET_CHANNEL_ID = 1341317415367082006  # 🔥 กำหนดค่า ID ห�
 
 @bot.event
 async def on_message(message):
+    if message.channel.id != 1341317415367082006:
+        return
+
+    if message.author.bot and message.author.name == "Captain Hook":  
+        logging.info(f"📥 ได้รับข้อความจาก Captain Hook: {message.content}")  # ✅ Debug
+
     if message.channel.id == TARGET_CHANNEL_ID:  # ✅ ตรวจสอบห้องที่กำหนด
         if message.author.bot and message.author.name == "Captain Hook":  
             logging.info("📥 ได้รับข้อความจาก Captain Hook ในห้องที่กำหนด")
 
             # ใช้ Regular Expression ดึงข้อมูล
-            pattern = r"ชื่อ\s*\n(.+?)\s*\nไอดี\s*\n(.+?)\s*\nเวลาเข้างาน\s*\n(.+?)\s*\nเวลาออกงาน\s*\n(.+?)\s*\n"
+            pattern = r"ชื่อ\s*\n(.+?)\s*\nไอดี\s*\n(.+?)\s*\nเวลาเข้างาน\s*\n(.+?)\s*\nเวลาออกงาน\s*\n(.+?)"
             match = re.search(pattern, message.content, re.DOTALL)
 
             if match:
@@ -79,7 +85,7 @@ async def on_message(message):
                         logging.info("✅ ข้อมูลถูกบันทึกลง Google Sheets สำเร็จ")
                     except Exception as e:
                         logging.error(f"❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล Google Sheets: {e}")
-
+    
     await bot.process_commands(message)  # ✅ ใช้ได้แล้ว
 
 # ตั้งค่า Google Sheets
