@@ -61,15 +61,20 @@ async def on_message(message):
         return
 
     if message.author.bot and message.author.name == "Captain Hook":  
-        logging.info(f"📥 ได้รับข้อความจาก Captain Hook: \n{repr(message.content)}")  # ✅ Log ข้อความแบบ raw
+        # ✅ ลองอ่านจาก message.embeds ถ้า message.content เป็นค่าว่าง
+        content = message.content.strip()
+        if not content and message.embeds:
+            content = message.embeds[0].description if message.embeds[0].description else ''
 
-        # ✅ Debug: พิมพ์ข้อความที่ได้รับออกมาเพื่อดูฟอร์แมตที่แท้จริง
-        print(f"\n----- DEBUG: ข้อความที่ได้รับ -----\n{repr(message.content)}\n-----------------------------")
+        logging.info(f"📥 ได้รับข้อความจาก Captain Hook: \n{repr(content)}")  
 
-        # ✅ ใช้ Regex ใหม่ที่รองรับรูปแบบปัจจุบัน
+        if not content:
+            logging.warning("⚠️ ข้อความที่ได้รับว่างเปล่า!")
+            return  # จบการทำงานตรงนี้ถ้าไม่มีข้อความจริงๆ
+
+        # ✅ ใช้ Regex วิเคราะห์ข้อมูล
         pattern = r"ชื่อ\s*(.+?)\s*ไอดี\s*steam:(\S+)\s*เวลาเข้างาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)\s*เวลาออกงาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)"
-
-        match = re.search(pattern, message.content, re.DOTALL | re.MULTILINE | re.IGNORECASE)
+        match = re.search(pattern, content, re.DOTALL | re.MULTILINE | re.IGNORECASE)
 
         if match:
             name = match.group(1).strip()
@@ -86,7 +91,7 @@ async def on_message(message):
                 except Exception as e:
                     logging.error(f"❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล Google Sheets: {e}")
         else:
-            logging.warning(f"⚠️ ข้อมูลที่ได้รับไม่ตรงกับรูปแบบที่กำหนด:\n{repr(message.content)}")  # ✅ Log ข้อความแบบละเอียด
+            logging.warning(f"⚠️ ข้อมูลที่ได้รับไม่ตรงกับรูปแบบที่กำหนด:\n{repr(content)}")  
 
     await bot.process_commands(message)
 
