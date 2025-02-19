@@ -9,6 +9,7 @@ import requests
 import time
 from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask
+from discord.ext import commands  # ✅ เพิ่ม import
 
 # ตั้งค่า Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -19,7 +20,7 @@ intents.message_content = True
 intents.members = True
 intents.presences = True
 
-bot = discord.Client(intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents)  # ✅ เปลี่ยนจาก Client เป็น Bot
 
 # ตั้งค่า Flask App
 app = Flask(__name__)
@@ -75,7 +76,7 @@ async def on_message(message):
                 except Exception as e:
                     logging.error(f"❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล Google Sheets: {e}")
 
-    await bot.process_commands(message)  # รองรับคำสั่งของบอท
+    await bot.process_commands(message)  # ✅ ใช้ได้แล้ว
 
 # ตั้งค่า Google Sheets
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
