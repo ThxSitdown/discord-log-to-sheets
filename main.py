@@ -70,6 +70,12 @@ def format_datetime(raw_time):
         logging.warning(f"⚠️ รูปแบบเวลาไม่ถูกต้อง: {raw_time}")
         return raw_time  # ถ้าข้อมูลไม่ตรงกับรูปแบบ ให้คืนค่าตามที่ได้รับมา
 
+# ✅ ฟังก์ชันหาบรรทัดสุดท้ายของ Google Sheets
+def get_last_row():
+    values = sheet.get_all_values()
+    last_row = len(values) + 1
+    return last_row
+
 @bot.event
 async def on_message(message):
     if message.channel.id != TARGET_CHANNEL_ID:
@@ -77,7 +83,7 @@ async def on_message(message):
 
     if message.author.bot and message.author.name == "Captain Hook":
         content = message.content.strip()
-        embed_content = ""
+        name, steam_id, check_in_time, check_out_time = None, None, None, None
 
         # ✅ ดึงข้อมูลจาก Embed
         if message.embeds:
@@ -93,9 +99,9 @@ async def on_message(message):
                         check_out_time = format_datetime(field.value.strip())
 
         # ✅ หากดึงข้อมูลจาก Embed ไม่ได้ ลองใช้ Regex
-        if not (name and steam_id and check_in_time and check_out_time):
+        if not all([name, steam_id, check_in_time, check_out_time]):
             pattern = r"ชื่อ\s*(.+?)\s*ไอดี\s*steam:(\S+)\s*เวลาเข้างาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)\s*เวลาออกงาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)"
-            match = re.search(pattern, full_content, re.DOTALL | re.MULTILINE | re.IGNORECASE)
+            match = re.search(pattern, content, re.DOTALL | re.MULTILINE | re.IGNORECASE)
 
             if match:
                 name = match.group(1).strip()
@@ -104,12 +110,13 @@ async def on_message(message):
                 check_out_time = format_datetime(match.group(4).strip())
 
         # ✅ ตรวจสอบว่าข้อมูลครบถ้วนก่อนบันทึก
-        if name and steam_id and check_in_time and check_out_time:
+        if all([name, steam_id, check_in_time, check_out_time]):
             logging.info(f"📌 บันทึกข้อมูล: {name}, {steam_id}, {check_in_time}, {check_out_time}")
 
             if sheet:
                 try:
-                    sheet.append_row([name, steam_id, check_in_time, check_out_time])
+                    last_row = get_last_row()
+                    sheet.update(f"A{last_row}:D{last_row}", [[name, steam_id, check_in_time, check_out_time]])
                     logging.info("✅ ข้อมูลถูกบันทึกลง Google Sheets สำเร็จ")
                 except Exception as e:
                     logging.error(f"❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล Google Sheets: {e}")
@@ -117,7 +124,6 @@ async def on_message(message):
             logging.warning("⚠️ ข้อมูลไม่ครบถ้วน ไม่สามารถบันทึกได้!")
 
     await bot.process_commands(message)
-
 
 # ตั้งค่า Google Sheets
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
