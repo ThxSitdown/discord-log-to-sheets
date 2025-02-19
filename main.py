@@ -66,7 +66,10 @@ async def on_message(message):
         embed_content = ""
 
         if message.embeds:
-            embed_content = "\n".join([embed.description for embed in message.embeds if embed.description])
+            embed_content = "\n".join([
+                f"{embed.title}\n{embed.description}" if embed.title else embed.description
+                for embed in message.embeds if embed.description or embed.title
+            ])
 
         # ✅ รวมข้อความจาก content และ embed
         full_content = content if content else embed_content
@@ -75,7 +78,7 @@ async def on_message(message):
 
         if not full_content:
             logging.warning("⚠️ ข้อความที่ได้รับว่างเปล่า!")
-            return  # ออกจากฟังก์ชันถ้ายังไม่มีข้อมูล
+            return  
 
         # ✅ ใช้ Regex วิเคราะห์ข้อมูล
         pattern = r"ชื่อ\s*(.+?)\s*ไอดี\s*steam:(\S+)\s*เวลาเข้างาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)\s*เวลาออกงาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)"
