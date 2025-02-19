@@ -72,8 +72,8 @@ def format_datetime(raw_time):
 
 # ✅ ฟังก์ชันหาบรรทัดสุดท้ายของ Google Sheets
 def get_last_row():
-    values = sheet.get_all_values()
-    last_row = len(values) + 1
+    values = sheet.col_values(1)  # ✅ ดึงเฉพาะข้อมูลจากคอลัมน์ A
+    last_row = len(values) + 1  # คำนวณแถวถัดไป
     return last_row
 
 @bot.event
