@@ -10,6 +10,7 @@ import time
 from oauth2client.service_account import ServiceAccountCredentials
 from flask import Flask
 from discord.ext import commands
+import datetime
 
 # ตั้งค่า Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -55,6 +56,20 @@ async def on_ready():
 # ✅ รับข้อมูลเฉพาะจากห้องที่มี ID = 1341317415367082006 เท่านั้น
 TARGET_CHANNEL_ID = 1341317415367082006  
 
+# ฟังก์ชันสำหรับแปลงเวลาเป็นรูปแบบ DD/MM/YYYY HH:MM:SS
+def format_datetime(raw_time):
+    pattern = r"(\d{1,2})/(\d{1,2})/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})"
+    match = re.search(pattern, raw_time)
+    
+    if match:
+        day, month, year, hour, minute, second = match.groups()
+        formatted_time = f"{int(day):02d}/{int(month):02d}/{year} {int(hour):02d}:{int(minute):02d}:{int(second):02d}"
+        logging.info(f"🕒 แปลงเวลา {raw_time} ➝ {formatted_time}")
+        return formatted_time
+    else:
+        logging.warning(f"⚠️ รูปแบบเวลาไม่ถูกต้อง: {raw_time}")
+        return raw_time  # ถ้าข้อมูลไม่ตรงกับรูปแบบ ให้คืนค่าตามที่ได้รับมา
+
 @bot.event
 async def on_message(message):
     if message.channel.id != TARGET_CHANNEL_ID:
@@ -67,38 +82,15 @@ async def on_message(message):
         # ✅ ดึงข้อมูลจาก Embed
         if message.embeds:
             for embed in message.embeds:
-                logging.info(f"📌 Embed Title: {embed.title}")
-                logging.info(f"📌 Embed Description: {embed.description}")
-
                 for field in embed.fields:
-                    logging.info(f"📌 Embed Field: {field.name} -> {field.value}")
-
-                embed_content = "\n".join([
-                    f"{embed.title}\n{embed.description}" if embed.title else embed.description
-                    for embed in message.embeds if embed.description or embed.title
-                ])
-
-        # ✅ รวมข้อความจาก content และ embed
-        full_content = content if content else embed_content
-        logging.info(f"📥 ได้รับข้อความจาก Captain Hook:\n{repr(full_content)}")
-
-        if not full_content:
-            logging.warning("⚠️ ข้อความที่ได้รับว่างเปล่า!")
-            return  
-
-        # ✅ ตรวจสอบข้อมูลจาก Embed Fields
-        name, steam_id, check_in_time, check_out_time = None, None, None, None
-
-        for embed in message.embeds:
-            for field in embed.fields:
-                if "ชื่อ" in field.name:
-                    name = field.value.strip()
-                elif "ไอดี" in field.name:
-                    steam_id = field.value.strip().replace("steam:", "")
-                elif "เข้างาน" in field.name:
-                    check_in_time = field.value.strip()
-                elif "ออกงาน" in field.name:
-                    check_out_time = field.value.strip()
+                    if "ชื่อ" in field.name:
+                        name = field.value.strip()
+                    elif "ไอดี" in field.name:
+                        steam_id = field.value.strip().replace("steam:", "")
+                    elif "เข้างาน" in field.name:
+                        check_in_time = format_datetime(field.value.strip())
+                    elif "ออกงาน" in field.name:
+                        check_out_time = format_datetime(field.value.strip())
 
         # ✅ หากดึงข้อมูลจาก Embed ไม่ได้ ลองใช้ Regex
         if not (name and steam_id and check_in_time and check_out_time):
@@ -108,8 +100,8 @@ async def on_message(message):
             if match:
                 name = match.group(1).strip()
                 steam_id = match.group(2).strip()
-                check_in_time = match.group(3).strip()
-                check_out_time = match.group(4).strip()
+                check_in_time = format_datetime(match.group(3).strip())
+                check_out_time = format_datetime(match.group(4).strip())
 
         # ✅ ตรวจสอบว่าข้อมูลครบถ้วนก่อนบันทึก
         if name and steam_id and check_in_time and check_out_time:
