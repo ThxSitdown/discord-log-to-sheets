@@ -60,21 +60,26 @@ async def on_message(message):
     if message.channel.id != TARGET_CHANNEL_ID:
         return
 
-    if message.author.bot and message.author.name == "Captain Hook":  
-        # ✅ ลองอ่านจาก message.embeds ถ้า message.content เป็นค่าว่าง
+    if message.author.bot and message.author.name == "Captain Hook":
+        # ✅ ตรวจสอบข้อความที่ได้รับ
         content = message.content.strip()
-        if not content and message.embeds:
-            content = message.embeds[0].description if message.embeds[0].description else ''
+        embed_content = ""
 
-        logging.info(f"📥 ได้รับข้อความจาก Captain Hook: \n{repr(content)}")  
+        if message.embeds:
+            embed_content = "\n".join([embed.description for embed in message.embeds if embed.description])
 
-        if not content:
+        # ✅ รวมข้อความจาก content และ embed
+        full_content = content if content else embed_content
+
+        logging.info(f"📥 ได้รับข้อความจาก Captain Hook:\n{repr(full_content)}")
+
+        if not full_content:
             logging.warning("⚠️ ข้อความที่ได้รับว่างเปล่า!")
-            return  # จบการทำงานตรงนี้ถ้าไม่มีข้อความจริงๆ
+            return  # ออกจากฟังก์ชันถ้ายังไม่มีข้อมูล
 
         # ✅ ใช้ Regex วิเคราะห์ข้อมูล
         pattern = r"ชื่อ\s*(.+?)\s*ไอดี\s*steam:(\S+)\s*เวลาเข้างาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)\s*เวลาออกงาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)"
-        match = re.search(pattern, content, re.DOTALL | re.MULTILINE | re.IGNORECASE)
+        match = re.search(pattern, full_content, re.DOTALL | re.MULTILINE | re.IGNORECASE)
 
         if match:
             name = match.group(1).strip()
@@ -91,7 +96,7 @@ async def on_message(message):
                 except Exception as e:
                     logging.error(f"❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล Google Sheets: {e}")
         else:
-            logging.warning(f"⚠️ ข้อมูลที่ได้รับไม่ตรงกับรูปแบบที่กำหนด:\n{repr(content)}")  
+            logging.warning(f"⚠️ ข้อมูลที่ได้รับไม่ตรงกับรูปแบบที่กำหนด:\n{repr(full_content)}")  
 
     await bot.process_commands(message)
 
