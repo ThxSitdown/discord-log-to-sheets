@@ -57,8 +57,8 @@ if GOOGLE_CREDENTIALS:
         client = gspread.authorize(creds)
         
         # เชื่อมต่อชีตหลัก "PoliceDutytest"
-        sheet = client.open("PoliceDutytest").worksheet("Sheet1")
-        logging.info("✅ Google Sheets (PoliceDutytest) เชื่อมต่อสำเร็จ")
+        sheet = client.open("PoliceDuty").worksheet("Sheet1")
+        logging.info("✅ Google Sheets (PoliceDuty) เชื่อมต่อสำเร็จ")
         
         # เชื่อมต่อชีต "PoliceCase"
         police_case_sheet = client.open("PoliceCase")
