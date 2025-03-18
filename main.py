@@ -160,6 +160,8 @@ async def on_message(message):
                 officer_name = case_match.group(1).strip()
                 case_details = case_match.group(2).strip()
 
+                officer_name = re.sub(r"\*\*", "", officer_name).strip()
+
                 case_details = re.split(r"\s*ใส่\s*", case_details)[0]
                 logging.info(f"✅ Extracted case - Officer: {officer_name}, Case: {case_details}")
 
@@ -181,10 +183,11 @@ async def on_message(message):
 
         # บันทึกข้อมูลลง Google Sheets
         if take_sheet:
-            save_to_sheet(take_sheet, [message.author.name, message.content])
-            logging.info(f"✅ บันทึกลง Take2: {message.author.name} - {message.content}")
+            save_to_sheet(take_sheet, [message.author.display_name, message.content])
+            logging.info(f"✅ บันทึกลง Take2: {message.author.display_name} - {message.content}")
         else:
             logging.error("❌ ไม่สามารถเข้าถึงชีต Take2")
+
 
     await bot.process_commands(message)
 
