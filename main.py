@@ -188,7 +188,7 @@ async def on_message(message):
     await bot.process_commands(message)
 
 # ✅ ฟังก์ชัน Keep-Alive
-KEEP_ALIVE_URL = "https://policebottest.onrender.com/health"
+KEEP_ALIVE_URL = "https://discord-log-to-sheets.onrender.com/health"
 
 def keep_alive():
     while True:
