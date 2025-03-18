@@ -21,7 +21,7 @@ intents.message_content = True
 intents.members = True
 intents.presences = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)  # ✅ ใช้ Bot แทน Client
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ตั้งค่า Flask App
 app = Flask(__name__)
@@ -46,17 +46,37 @@ async def on_ready():
     logging.info(f"🤖 {bot.user} is online and ready!")
     await bot.change_presence(activity=discord.Game(name="Roblox"))
 
-    if sheet:
-        try:
-            test_value = sheet.acell("A1").value
-            logging.info(f"✅ Google Sheets เชื่อมต่อสำเร็จ! (Test Read: A1 = {test_value})")
-        except Exception as e:
-            logging.error(f"❌ ไม่สามารถเชื่อมต่อ Google Sheets: {e}")
+# ✅ ตั้งค่า Google Sheets
+SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
+sheet, log_red_case, log_black_case = None, None, None
 
-# ✅ รับข้อมูลเฉพาะจากห้องที่มี ID = 1341317415367082006 เท่านั้น
-TARGET_CHANNEL_ID = 1341317415367082006  
+if GOOGLE_CREDENTIALS:
+    try:
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(GOOGLE_CREDENTIALS), SCOPE)
+        client = gspread.authorize(creds)
+        
+        # เชื่อมต่อชีตหลัก "PoliceDutytest"
+        sheet = client.open("PoliceDutytest").worksheet("Sheet1")
+        logging.info("✅ Google Sheets (PoliceDutytest) เชื่อมต่อสำเร็จ")
+        
+        # เชื่อมต่อชีต "PoliceCase"
+        police_case_sheet = client.open("PoliceCase")
+        log_red_case = police_case_sheet.worksheet("logREDcase")
+        log_black_case = police_case_sheet.worksheet("logBlackcase")
+        logging.info("✅ Google Sheets (PoliceCase) เชื่อมต่อสำเร็จ")
 
-# ฟังก์ชันสำหรับแปลงเวลาเป็นรูปแบบ DD/MM/YYYY HH:MM:SS
+    except Exception as e:
+        logging.error(f"❌ ไม่สามารถเชื่อมต่อ Google Sheets: {e}")
+else:
+    logging.warning("⚠️ GOOGLE_CREDENTIALS not found.")
+
+# ✅ ตั้งค่าห้องที่ใช้รับข้อมูล
+DUTY_CHANNEL_ID = 1341317415367082006  
+CASE_CHANNEL_ID = 1341326589157445652 
+TAKE_CHANNEL_ID = 1351619485899030651
+
+# ✅ ฟังก์ชันแปลงเวลาเป็นรูปแบบ DD/MM/YYYY HH:MM:SS
 def format_datetime(raw_time):
     pattern = r"(\d{1,2})/(\d{1,2})/(\d{4})\s+(\d{1,2}):(\d{2}):(\d{2})"
     match = re.search(pattern, raw_time)
@@ -68,96 +88,107 @@ def format_datetime(raw_time):
         return formatted_time
     else:
         logging.warning(f"⚠️ รูปแบบเวลาไม่ถูกต้อง: {raw_time}")
-        return raw_time  # ถ้าข้อมูลไม่ตรงกับรูปแบบ ให้คืนค่าตามที่ได้รับมา
+        return raw_time
 
-# ✅ ฟังก์ชันหาบรรทัดสุดท้ายของ Google Sheets
-def get_last_row():
-    values = sheet.col_values(1)  # ✅ ดึงเฉพาะข้อมูลจากคอลัมน์ A
-    last_row = len(values) + 1  # คำนวณแถวถัดไป
-    return last_row
+# ✅ ฟังก์ชันบันทึกข้อมูลลง Google Sheets
+def save_to_sheet(sheet, values):
+    try:
+        last_row = len(sheet.col_values(1)) + 1
+        sheet.update(f"A{last_row}:D{last_row}", [values])
+        logging.info(f"✅ บันทึกลง Google Sheets: {values}")
+    except Exception as e:
+        logging.error(f"❌ ไม่สามารถบันทึกลง Google Sheets: {e}")
 
 @bot.event
 async def on_message(message):
-    if message.channel.id != TARGET_CHANNEL_ID:
-        return
-
-    if message.author.bot and message.author.name == "Captain Hook":
+    if message.author.bot:
         content = message.content.strip()
-        name, steam_id, check_in_time, check_out_time = None, None, None, None
 
-        # ✅ ดึงข้อมูลจาก Embed
-        if message.embeds:
-            for embed in message.embeds:
-                for field in embed.fields:
-                    if "ชื่อ" in field.name:
-                        name = field.value.strip("`").strip()
-                    elif "ไอดี" in field.name:
-                        steam_id = field.value.strip().replace("steam:", "")
-                    elif "เข้างาน" in field.name:
-                        check_in_time = format_datetime(field.value.strip())
-                    elif "ออกงาน" in field.name:
-                        check_out_time = format_datetime(field.value.strip())
+        # ✅ ตรวจสอบการบันทึกเวลางาน (PoliceDutytest)
+        if message.channel.id == DUTY_CHANNEL_ID and message.author.name == "Captain Hook":
+            name, steam_id, check_in_time, check_out_time = None, None, None, None
 
-        # ✅ หากดึงข้อมูลจาก Embed ไม่ได้ ลองใช้ Regex
-        if not all([name, steam_id, check_in_time, check_out_time]):
-            pattern = r"ชื่อ\s*(.+?)\s*ไอดี\s*steam:(\S+)\s*เวลาเข้างาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)\s*เวลาออกงาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)"
-            match = re.search(pattern, content, re.DOTALL | re.MULTILINE | re.IGNORECASE)
+            if message.embeds:
+                for embed in message.embeds:
+                    for field in embed.fields:
+                        if "ชื่อ" in field.name:
+                            name = field.value.strip("`").strip()
+                        elif "ไอดี" in field.name:
+                            steam_id = field.value.strip().replace("steam:", "")
+                        elif "เข้างาน" in field.name:
+                            check_in_time = format_datetime(field.value.strip())
+                        elif "ออกงาน" in field.name:
+                            check_out_time = format_datetime(field.value.strip())
 
-            if match:
-                name = match.group(1).strip("`").strip()
-                steam_id = match.group(2).strip()
-                check_in_time = format_datetime(match.group(3).strip())
-                check_out_time = format_datetime(match.group(4).strip())
+            # ใช้ Regex เป็นตัวสำรอง
+            if not all([name, steam_id, check_in_time, check_out_time]):
+                pattern = r"ชื่อ\s*(.+?)\s*ไอดี\s*steam:(\S+)\s*เวลาเข้างาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)\s*เวลาออกงาน\s*(?:\S+\s-\s)?([\d/]+\s[\d:]+)"
+                match = re.search(pattern, content, re.DOTALL | re.MULTILINE | re.IGNORECASE)
 
-        # ✅ ตรวจสอบว่าข้อมูลครบถ้วนก่อนบันทึก
-        if all([name, steam_id, check_in_time, check_out_time]):
-            logging.info(f"📌 บันทึกข้อมูล: {name}, {steam_id}, {check_in_time}, {check_out_time}")
+                if match:
+                    name = match.group(1).strip("`").strip()
+                    steam_id = match.group(2).strip()
+                    check_in_time = format_datetime(match.group(3).strip())
+                    check_out_time = format_datetime(match.group(4).strip())
 
-            if sheet:
-                try:
-                    last_row = get_last_row()
-                    sheet.update(f"A{last_row}:D{last_row}", [[name, steam_id, check_in_time, check_out_time]])
-                    logging.info("✅ ข้อมูลถูกบันทึกลง Google Sheets สำเร็จ")
-                except Exception as e:
-                    logging.error(f"❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล Google Sheets: {e}")
+            # ✅ บันทึกลง Google Sheets ถ้าข้อมูลครบ
+            if all([name, steam_id, check_in_time, check_out_time]) and sheet:
+                save_to_sheet(sheet, [name, steam_id, check_in_time, check_out_time])
+            else:
+                logging.warning("⚠️ ข้อมูลไม่ครบถ้วน ไม่สามารถบันทึกได้!")
+
+        # ✅ ตรวจสอบการบันทึกคดี (PoliceCase)
+        elif message.channel.id == CASE_CHANNEL_ID:
+            logging.info(f"📌 Raw case message: {repr(content)}")
+
+            case_match = None  # เก็บผลลัพธ์ของการตรวจสอบคดี
+
+            # ✅ ตรวจสอบข้อความปกติก่อน
+            case_match = re.search(r"Name:\s*([^\n]+).*?ได้ทำคดี\s*([^\n]+)", content, re.DOTALL | re.IGNORECASE)
+
+            # ✅ ถ้าไม่พบข้อมูลในข้อความ ให้ลองดึงข้อมูลจาก Embed
+            if not case_match and message.embeds:
+                embed = message.embeds[0]  # ดึงเฉพาะ Embed แรก
+                embed_text = f"{embed.title}\n{embed.description}"
+
+                logging.info(f"📌 Extracted from embed: {repr(embed_text)}")
+
+                case_match = re.search(r"Name:\s*([^\n]+).*?ได้ทำคดี\s*([^\n]+)", embed_text, re.DOTALL | re.IGNORECASE)
+
+            # ✅ บันทึกข้อมูลหากตรงรูปแบบ
+            if case_match:
+                officer_name = case_match.group(1).strip()
+                case_details = case_match.group(2).strip()
+
+                case_details = re.split(r"\s*ใส่\s*", case_details)[0]
+                logging.info(f"✅ Extracted case - Officer: {officer_name}, Case: {case_details}")
+
+                if "RED" in case_details and log_red_case:
+                    logging.info("🚨 RED case detected, saving to logREDcase")
+                    save_to_sheet(log_red_case, [officer_name, case_details])
+                elif log_black_case:
+                    logging.info("📁 Black case detected, saving to logBlackcase")
+                    save_to_sheet(log_black_case, [officer_name, case_details])
+            else:
+                logging.warning("⚠️ Case format not recognized")
+        
+        # ✅ Take2
+    elif message.channel.id == TAKE_CHANNEL_ID:
+        logging.info(f"📌 รับข้อความจาก Take2 Channel: {repr(message.content)}")
+
+        take_sheet = police_case_sheet.worksheet("Take2")  # ดึงชีต Take2
+
+        # บันทึกข้อมูลลง Google Sheets
+        if take_sheet:
+            save_to_sheet(take_sheet, [message.author.name, message.content])
+            logging.info(f"✅ บันทึกลง Take2: {message.author.name} - {message.content}")
         else:
-            logging.warning("⚠️ ข้อมูลไม่ครบถ้วน ไม่สามารถบันทึกได้!")
+            logging.error("❌ ไม่สามารถเข้าถึงชีต Take2")
 
     await bot.process_commands(message)
 
-# ตั้งค่า Google Sheets
-SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-GOOGLE_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS")
-sheet = None
-
-if GOOGLE_CREDENTIALS:
-    try:
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(GOOGLE_CREDENTIALS), SCOPE)
-        client = gspread.authorize(creds)
-        sheet = client.open("PoliceDuty").worksheet("Sheet1")
-        logging.info("✅ Google Sheets setup completed.")
-    except Exception as e:
-        logging.error(f"❌ Error loading Google Sheets credentials: {e}")
-else:
-    logging.warning("⚠️ GOOGLE_CREDENTIALS not found.")
-
-# ฟังก์ชันสำหรับรัน Discord Bot
-def run_discord_bot():
-    DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-    if not DISCORD_BOT_TOKEN:
-        logging.error("❌ DISCORD_BOT_TOKEN not found. Bot will not start.")
-        return
-    
-    try:
-        logging.info("🚀 Starting Discord Bot...")
-        bot.run(DISCORD_BOT_TOKEN)
-    except discord.errors.LoginFailure:
-        logging.error("❌ Invalid Discord Bot Token! กรุณาตรวจสอบโทเค็นของคุณ.")
-    except Exception as e:
-        logging.error(f"❌ Discord bot encountered an error: {e}")
-
-# ฟังก์ชัน Keep-Alive
-KEEP_ALIVE_URL = "https://discord-log-to-sheets.onrender.com/health"
+# ✅ ฟังก์ชัน Keep-Alive
+KEEP_ALIVE_URL = "https://policebottest.onrender.com/health"
 
 def keep_alive():
     while True:
@@ -171,7 +202,22 @@ def keep_alive():
             logging.error(f"❌ Keep-alive error: {e}")
         time.sleep(40)
 
-# Main
+# ✅ ฟังก์ชันรันบอท
+def run_discord_bot():
+    DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+    if not DISCORD_BOT_TOKEN:
+        logging.error("❌ DISCORD_BOT_TOKEN not found. Bot will not start.")
+        return
+    
+    try:
+        logging.info("🚀 Starting Discord Bot...")
+        bot.run(DISCORD_BOT_TOKEN)
+    except discord.errors.LoginFailure:
+        logging.error("❌ Invalid Discord Bot Token!")
+    except Exception as e:
+        logging.error(f"❌ Discord bot error: {e}")
+
+# ✅ Main
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
     threading.Thread(target=keep_alive, daemon=True).start()
