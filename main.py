@@ -165,7 +165,7 @@ async def on_message(message):
                 case_details = re.split(r"\s*ใส่\s*", case_details)[0]
                 logging.info(f"✅ Extracted case - Officer: {officer_name}, Case: {case_details}")
 
-                if "RED" in case_details and log_red_case:
+                if re.search(r"\bred\b", case_details, re.IGNORECASE) and log_red_case:
                     logging.info("🚨 RED case detected, saving to logREDcase")
                     save_to_sheet(log_red_case, [officer_name, case_details])
                 elif log_black_case:
