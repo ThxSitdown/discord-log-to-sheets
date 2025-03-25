@@ -192,19 +192,19 @@ async def on_message(message):
     await bot.process_commands(message)
 
 # ✅ ฟังก์ชัน Keep-Alive
-KEEP_ALIVE_URL = "https://discord-log-to-sheets-iqla.onrender.com/health"
+#KEEP_ALIVE_URL = "https://discord-log-to-sheets-iqla.onrender.com/health"
 
-def keep_alive():
-    while True:
-        try:
-            response = requests.get(KEEP_ALIVE_URL)
-            if response.status_code == 200:
-                logging.info("✅ Keep-alive successful.")
-            else:
-                logging.warning(f"⚠️ Keep-alive failed (Status: {response.status_code})")
-        except Exception as e:
-            logging.error(f"❌ Keep-alive error: {e}")
-        time.sleep(40)
+#def keep_alive():
+#    while True:
+#        try:
+#            response = requests.get(KEEP_ALIVE_URL)
+#            if response.status_code == 200:
+#                logging.info("✅ Keep-alive successful.")
+#            else:
+#                logging.warning(f"⚠️ Keep-alive failed (Status: {response.status_code})")
+#        except Exception as e:
+#            logging.error(f"❌ Keep-alive error: {e}")
+#        time.sleep(40)
 
 # ✅ ฟังก์ชันรันบอท
 def run_discord_bot():
