@@ -224,5 +224,5 @@ def run_discord_bot():
 # ✅ Main
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
-    threading.Thread(target=keep_alive, daemon=True).start()
+    #threading.Thread(target=keep_alive, daemon=True).start()
     run_discord_bot()
