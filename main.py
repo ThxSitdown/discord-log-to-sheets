@@ -106,7 +106,11 @@ def calculate_bonus_time(start_time_str, end_time_str):
         else:
             bonus_duration = real_end - real_start
 
-        return str(bonus_duration)
+        total_seconds = int(bonus_duration.total_seconds())
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{hours:02}:{minutes:02}:{seconds:02}"
+
     except Exception as e:
         logging.error(f"❌ Error calculating bonus time: {e}")
         return "00:00:00"
