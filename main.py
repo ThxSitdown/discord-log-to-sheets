@@ -95,22 +95,22 @@ def calculate_bonus_time(start_time_str, end_time_str):
         start_dt = datetime.datetime.strptime(start_time_str, "%d/%m/%Y %H:%M:%S")
         end_dt = datetime.datetime.strptime(end_time_str, "%d/%m/%Y %H:%M:%S")
 
+        # กำหนดช่วงเวลาโบนัส (ภายในวันเดียวกันเท่านั้น)
         bonus_start = start_dt.replace(hour=18, minute=0, second=0)
         bonus_end = start_dt.replace(hour=23, minute=59, second=59)
 
+        # หาจุดตัดที่เหมาะสมระหว่างเวลาเข้า-ออก กับช่วงโบนัส
         real_start = max(start_dt, bonus_start)
         real_end = min(end_dt, bonus_end)
 
+        # ถ้าเวลาสิ้นสุดก่อนเวลาเริ่ม แสดงว่าไม่มีเวลาที่เข้าเงื่อนไข
         if real_end < real_start:
             bonus_duration = datetime.timedelta()
         else:
             bonus_duration = real_end - real_start
 
-        total_seconds = int(bonus_duration.total_seconds())
-        hours, remainder = divmod(total_seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        return f"{hours:02}:{minutes:02}:{seconds:02}"
-
+        # คืนค่าเวลาผลลัพธ์ที่แสดงในรูปแบบที่ต้องการ
+        return str(bonus_duration) if bonus_duration != datetime.timedelta() else "00:00:00"
     except Exception as e:
         logging.error(f"❌ Error calculating bonus time: {e}")
         return "00:00:00"
