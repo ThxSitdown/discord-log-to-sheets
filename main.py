@@ -90,11 +90,32 @@ def format_datetime(raw_time):
         logging.warning(f"⚠️ รูปแบบเวลาไม่ถูกต้อง: {raw_time}")
         return raw_time
 
-# ✅ ฟังก์ชันบันทึกข้อมูลลง Google Sheets
+def calculate_bonus_time(start_time_str, end_time_str):
+    try:
+        start_dt = datetime.datetime.strptime(start_time_str, "%d/%m/%Y %H:%M:%S")
+        end_dt = datetime.datetime.strptime(end_time_str, "%d/%m/%Y %H:%M:%S")
+
+        bonus_start = start_dt.replace(hour=18, minute=0, second=0)
+        bonus_end = start_dt.replace(hour=23, minute=59, second=59)
+
+        real_start = max(start_dt, bonus_start)
+        real_end = min(end_dt, bonus_end)
+
+        if real_end < real_start:
+            bonus_duration = datetime.timedelta()
+        else:
+            bonus_duration = real_end - real_start
+
+        return str(bonus_duration)
+    except Exception as e:
+        logging.error(f"❌ Error calculating bonus time: {e}")
+        return "00:00:00"
+
 def save_to_sheet(sheet, values):
     try:
-        last_row = len(sheet.col_values(1)) + 1
-        sheet.update(f"A{last_row}:D{last_row}", [values])
+        last_row = len(sheet.col_values(1)) + 1  # หาค่า row ล่าสุด
+        sheet.update(f"A{last_row}:E{last_row}", [values[:5]])
+        sheet.update(f"G{last_row}:H{last_row}", [values[6:]])
         logging.info(f"✅ บันทึกลง Google Sheets: {values}")
     except Exception as e:
         logging.error(f"❌ ไม่สามารถบันทึกลง Google Sheets: {e}")
@@ -133,7 +154,9 @@ async def on_message(message):
 
             # ✅ บันทึกลง Google Sheets ถ้าข้อมูลครบ
             if all([name, steam_id, check_in_time, check_out_time]) and sheet:
-                save_to_sheet(sheet, [name, steam_id, check_in_time, check_out_time])
+                bonus_time = calculate_bonus_time(check_in_time, check_out_time)
+                values = [name, steam_id, check_in_time, check_out_time, "", "", "", bonus_time]
+                save_to_sheet(sheet, values)
             else:
                 logging.warning("⚠️ ข้อมูลไม่ครบถ้วน ไม่สามารถบันทึกได้!")
 
@@ -191,21 +214,6 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
-# ✅ ฟังก์ชัน Keep-Alive
-#KEEP_ALIVE_URL = "https://discord-log-to-sheets-iqla.onrender.com/health"
-
-#def keep_alive():
-#    while True:
-#        try:
-#            response = requests.get(KEEP_ALIVE_URL)
-#            if response.status_code == 200:
-#                logging.info("✅ Keep-alive successful.")
-#            else:
-#                logging.warning(f"⚠️ Keep-alive failed (Status: {response.status_code})")
-#        except Exception as e:
-#            logging.error(f"❌ Keep-alive error: {e}")
-#        time.sleep(40)
-
 # ✅ ฟังก์ชันรันบอท
 def run_discord_bot():
     DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
@@ -224,5 +232,4 @@ def run_discord_bot():
 # ✅ Main
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
-    #threading.Thread(target=keep_alive, daemon=True).start()
     run_discord_bot()
