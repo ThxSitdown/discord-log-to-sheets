@@ -159,7 +159,7 @@ async def on_message(message):
             # ✅ บันทึกลง Google Sheets ถ้าข้อมูลครบ
             if all([name, steam_id, check_in_time, check_out_time]) and sheet:
                 bonus_time = calculate_bonus_time(check_in_time, check_out_time)
-                values = [name, steam_id, check_in_time, check_out_time, "", "", "", bonus_time]
+                values = [name, steam_id, check_in_time, check_out_time, "", "", "", bonus_time.lstrip("'")]
                 save_to_sheet(sheet, values)
             else:
                 logging.warning("⚠️ ข้อมูลไม่ครบถ้วน ไม่สามารถบันทึกได้!")
