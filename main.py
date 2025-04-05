@@ -95,43 +95,42 @@ def calculate_bonus_time(start_time_str, end_time_str):
         start_dt = datetime.datetime.strptime(start_time_str, "%d/%m/%Y %H:%M:%S")
         end_dt = datetime.datetime.strptime(end_time_str, "%d/%m/%Y %H:%M:%S")
 
-        bonus_duration = datetime.timedelta()
+        total_bonus = datetime.timedelta()
+        current = start_dt
 
-        current_dt = start_dt
-        while current_dt < end_dt:
-            next_dt = min(current_dt.replace(hour=23, minute=59, second=59) + datetime.timedelta(seconds=1), end_dt)
-            day_of_week = current_dt.weekday()  # 0 = Monday, ..., 6 = Sunday
+        while current < end_dt:
+            day = current.weekday()  # Monday = 0, Sunday = 6
+            bonus_start = current.replace(hour=18, minute=0, second=0)
 
-            # ช่วงโบนัสเริ่มต้นที่ 18:00 ของวันนั้น
-            bonus_start = current_dt.replace(hour=18, minute=0, second=0)
+            if day <= 3:  # Monday–Thursday ➝ 18:00–00:00
+                bonus_end = bonus_start + datetime.timedelta(hours=6)
 
-            if day_of_week <= 3:  # จันทร์-พฤหัสบดี
-                bonus_end = current_dt.replace(hour=23, minute=59, second=59)
-            else:  # ศุกร์-อาทิตย์
-                bonus_end = (current_dt + datetime.timedelta(days=1)).replace(hour=4, minute=0, second=0)
+            elif day == 6:  # Sunday ➝ 18:00–04:00 Monday (but skip 04:00 Monday)
+                bonus_end = bonus_start + datetime.timedelta(hours=10)
+                if bonus_end.weekday() == 0:
+                    bonus_end = bonus_end.replace(hour=0, minute=0, second=0)
 
-            # หาจุดตัดที่เหมาะสม
-            real_start = max(current_dt, bonus_start)
-            real_end = min(next_dt, bonus_end)
+            else:  # Friday, Saturday ➝ 18:00–04:00 next day
+                bonus_end = bonus_start + datetime.timedelta(hours=10)
+
+            real_start = max(current, bonus_start)
+            real_end = min(end_dt, bonus_end)
 
             if real_end > real_start:
-                bonus_duration += real_end - real_start
+                total_bonus += (real_end - real_start)
 
-            current_dt = next_dt
+            # ไปวันถัดไปตอนเที่ยงคืน
+            current = current.replace(hour=0, minute=0, second=0) + datetime.timedelta(days=1)
 
-        return str(bonus_duration) if bonus_duration != datetime.timedelta() else "00:00:00"
+        # แปลงผลลัพธ์ให้เป็นรูปแบบที่ Google Sheets เข้าใจ (เวลาในรูป HH:MM:SS)
+        hours, remainder = divmod(total_bonus.seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        formatted_bonus_time = f"{hours:02}:{minutes:02}:{seconds:02}"
 
+        return formatted_bonus_time if total_bonus != datetime.timedelta() else "00:00:00"
     except Exception as e:
         logging.error(f"❌ Error calculating bonus time: {e}")
         return "00:00:00"
-
-
-def format_timedelta(td):
-    total_seconds = int(td.total_seconds())
-    hours = total_seconds // 3600
-    minutes = (total_seconds % 3600) // 60
-    seconds = total_seconds % 60
-    return f"{hours:02}:{minutes:02}:{seconds:02}"
 
 def save_to_sheet(sheet, values):
     try:
@@ -142,23 +141,13 @@ def save_to_sheet(sheet, values):
     except Exception as e:
         logging.error(f"❌ ไม่สามารถบันทึกลง Google Sheets: {e}")
 
-def convert_to_google_time(time_str):
-    try:
-        h, m, s = map(int, time_str.split(":"))
-        # Google Sheets ใช้เวลาระบบ 1 วัน = 1.0
-        # ดังนั้น 1 ชั่วโมง = 1/24, 1 นาที = 1/1440, 1 วินาที = 1/86400
-        decimal_time = h / 24 + m / 1440 + s / 86400
-        return decimal_time
-    except:
-        return ""  # ถ้าแปลงไม่ได้ จะปล่อยว่าง
-
 
 @bot.event
 async def on_message(message):
     if message.author.bot:
         content = message.content.strip()
 
-        # ✅ ตรวจสอบการบันทึกเวลางาน (PoliceDutytest)
+        # ตรวจสอบการบันทึกเวลางาน (PoliceDutytest)
         if message.channel.id == DUTY_CHANNEL_ID and message.author.name == "Captain Hook":
             name, steam_id, check_in_time, check_out_time = None, None, None, None
 
@@ -185,11 +174,11 @@ async def on_message(message):
                     check_in_time = format_datetime(match.group(3).strip())
                     check_out_time = format_datetime(match.group(4).strip())
 
+            # บันทึกลง Google Sheets ถ้าข้อมูลครบ
             if all([name, steam_id, check_in_time, check_out_time]) and sheet:
-                bonus_time = calculate_bonus_time(check_in_time, check_out_time)  # คำนวณเวลาโบนัส
-                bonus_time_decimal = convert_to_google_time(bonus_time)  # แปลงเวลาโบนัสเป็นทศนิยม
-                values = [name, steam_id, check_in_time, check_out_time, "", "", "", bonus_time_decimal]
-                save_to_sheet(sheet, values)
+                bonus_time = calculate_bonus_time(check_in_time, check_out_time)  # คำนวณโบนัสเวลา
+                values = [name, steam_id, check_in_time, check_out_time, "", "", "", bonus_time]  # บันทึกข้อมูลพร้อม bonus_time
+                save_to_sheet(sheet, values)  # บันทึกลง Google Sheets
             else:
                 logging.warning("⚠️ ข้อมูลไม่ครบถ้วน ไม่สามารถบันทึกได้!")
 
