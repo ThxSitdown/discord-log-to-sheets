@@ -185,9 +185,9 @@ async def on_message(message):
                     check_in_time = format_datetime(match.group(3).strip())
                     check_out_time = format_datetime(match.group(4).strip())
 
-            # ✅ บันทึกลง Google Sheets ถ้าข้อมูลครบ
             if all([name, steam_id, check_in_time, check_out_time]) and sheet:
-                bonus_time_decimal = convert_to_google_time(bonus_time)
+                bonus_time = calculate_bonus_time(check_in_time, check_out_time)  # คำนวณเวลาโบนัส
+                bonus_time_decimal = convert_to_google_time(bonus_time)  # แปลงเวลาโบนัสเป็นทศนิยม
                 values = [name, steam_id, check_in_time, check_out_time, "", "", "", bonus_time_decimal]
                 save_to_sheet(sheet, values)
             else:
