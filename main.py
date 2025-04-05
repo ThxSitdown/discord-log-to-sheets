@@ -113,7 +113,15 @@ def calculate_bonus_time(start_time_str, end_time_str):
         return str(bonus_duration) if bonus_duration != datetime.timedelta() else "00:00:00"
     except Exception as e:
         logging.error(f"❌ Error calculating bonus time: {e}")
-        return "00:00:00"
+        return format_timedelta(bonus_duration) if bonus_duration != datetime.timedelta() else "00:00:00"
+
+
+def format_timedelta(td):
+    total_seconds = int(td.total_seconds())
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    return f"{hours:02}:{minutes:02}:{seconds:02}"
 
 def save_to_sheet(sheet, values):
     try:
