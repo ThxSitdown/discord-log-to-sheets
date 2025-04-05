@@ -132,6 +132,17 @@ def save_to_sheet(sheet, values):
     except Exception as e:
         logging.error(f"❌ ไม่สามารถบันทึกลง Google Sheets: {e}")
 
+def convert_to_google_time(time_str):
+    try:
+        h, m, s = map(int, time_str.split(":"))
+        # Google Sheets ใช้เวลาระบบ 1 วัน = 1.0
+        # ดังนั้น 1 ชั่วโมง = 1/24, 1 นาที = 1/1440, 1 วินาที = 1/86400
+        decimal_time = h / 24 + m / 1440 + s / 86400
+        return decimal_time
+    except:
+        return ""  # ถ้าแปลงไม่ได้ จะปล่อยว่าง
+
+
 @bot.event
 async def on_message(message):
     if message.author.bot:
@@ -166,8 +177,8 @@ async def on_message(message):
 
             # ✅ บันทึกลง Google Sheets ถ้าข้อมูลครบ
             if all([name, steam_id, check_in_time, check_out_time]) and sheet:
-                bonus_time = calculate_bonus_time(check_in_time, check_out_time)
-                values = [name, steam_id, check_in_time, check_out_time, "", "", "", bonus_time.lstrip("'")]
+                bonus_time_decimal = convert_to_google_time(bonus_time)
+                values = [name, steam_id, check_in_time, check_out_time, "", "", "", bonus_time_decimal]
                 save_to_sheet(sheet, values)
             else:
                 logging.warning("⚠️ ข้อมูลไม่ครบถ้วน ไม่สามารถบันทึกได้!")
