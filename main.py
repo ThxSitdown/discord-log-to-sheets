@@ -56,7 +56,7 @@ if GOOGLE_CREDENTIALS:
         creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(GOOGLE_CREDENTIALS), SCOPE)
         client = gspread.authorize(creds)
         
-        # เชื่อมต่อชีตหลัก "PoliceDutytest"
+        # เชื่อมต่อชีตหลัก "PoliceDuty"
         sheet = client.open("PoliceDuty").worksheet("Sheet1")
         logging.info("✅ Google Sheets (PoliceDuty) เชื่อมต่อสำเร็จ")
         
@@ -96,45 +96,34 @@ def calculate_bonus_time(start_time_str, end_time_str):
         end_dt = datetime.datetime.strptime(end_time_str, "%d/%m/%Y %H:%M:%S")
 
         total_bonus = datetime.timedelta()
-        current = start_dt
+        current = (start_dt - datetime.timedelta(days=1)).replace(hour=18, minute=0, second=0)
 
         while current < end_dt:
-            day = current.weekday()  # Monday = 0, Sunday = 6
+            day = current.weekday()
             bonus_start = current.replace(hour=18, minute=0, second=0)
 
-            # สำหรับวันจันทร์ถึงพฤหัสบดี ➝ 18:00–00:00
-            if day <= 3:  # Monday–Thursday
+            # วันศุกร์-เสาร์-อาทิตย์ ➝ 18:00–04:00 วันถัดไป
+            if day >= 4:
+                bonus_end = bonus_start + datetime.timedelta(hours=10)
+            else:
                 bonus_end = bonus_start + datetime.timedelta(hours=6)
 
-            # สำหรับวันศุกร์ถึงอาทิตย์ ➝ 18:00–04:00 ของวันถัดไป
-            elif day == 4:  # Friday
-                bonus_end = bonus_start + datetime.timedelta(hours=10)
+            if day == 6:
+                logging.info(f"📅 Sunday adjustment: {bonus_start} -> {bonus_end}")
 
-            elif day == 5:  # Saturday
-                bonus_end = bonus_start + datetime.timedelta(hours=10)
-
-            elif day == 6:  # Sunday
-                bonus_end = bonus_start + datetime.timedelta(hours=10)
-                if bonus_end.weekday() == 0:  # หากเวลาสิ้นสุดในวันจันทร์ ต้องปรับให้เป็น 04:00 ของวันอาทิตย์
-                    bonus_end = bonus_end.replace(hour=4, minute=0, second=0)
-
-            # คำนวณโบนัสเวลา
-            real_start = max(current, bonus_start)
+            # ช่วงเวลาที่จริงที่ทำงานและอยู่ในช่วงโบนัส
+            real_start = max(current, bonus_start, start_dt)
             real_end = min(end_dt, bonus_end)
 
-            # ถ้ามีช่วงเวลา bonus ที่สามารถคำนวณได้
             if real_end > real_start:
                 total_bonus += (real_end - real_start)
 
-            # ไปวันถัดไปตอนเที่ยงคืน
             current = current.replace(hour=0, minute=0, second=0) + datetime.timedelta(days=1)
 
-        # แปลงผลลัพธ์ให้เป็นรูปแบบที่ Google Sheets เข้าใจ (เวลาในรูป HH:MM:SS)
         hours, remainder = divmod(total_bonus.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
         formatted_bonus_time = f"{hours:02}:{minutes:02}:{seconds:02}"
 
-        # ตรวจสอบว่าโบนัสเวลาเป็น 00:00:00 หรือไม่ (หากไม่มีโบนัสเวลา)
         return formatted_bonus_time if total_bonus != datetime.timedelta() else "00:00:00"
     except Exception as e:
         logging.error(f"❌ Error calculating bonus time: {e}")
@@ -149,13 +138,12 @@ def save_to_sheet(sheet, values):
     except Exception as e:
         logging.error(f"❌ ไม่สามารถบันทึกลง Google Sheets: {e}")
 
-
 @bot.event
 async def on_message(message):
     if message.author.bot:
         content = message.content.strip()
 
-        # ตรวจสอบการบันทึกเวลางาน (PoliceDutytest)
+        # ตรวจสอบการบันทึกเวลางาน (PoliceDutัt)
         if message.channel.id == DUTY_CHANNEL_ID and message.author.name == "Captain Hook":
             name, steam_id, check_in_time, check_out_time = None, None, None, None
 
